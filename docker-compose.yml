@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: universidad
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./ServicioA/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+
+  servicioa:
+    build: ./ServicioA
+    container_name: servicioa
+    ports:
+      - "5001:5000"
+    depends_on:
+      - postgres
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=universidad;Username=postgres;Password=postgres
+
+  serviciob:
+    build: ./ServicioB
+    container_name: serviciob
+    ports:
+      - "5002:5000"
+    depends_on:
+      - postgres
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=universidad;Username=postgres;Password=postgres
+
+  apigateway:
+    build: ./ApiGateway
+    container_name: apigateway
+    ports:
+      - "5003:5000"
+    depends_on:
+      - servicioa
+      - serviciob
+
+volumes:
+  pgdata:
