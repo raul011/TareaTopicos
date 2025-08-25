@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "pFXMlt9g5nI=",
+  "dgSpecHash": "BGnHyTsGgAQ=",
   "success": true,
-  "projectFilePath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\ServicioA\\ServicioA.csproj",
+  "projectFilePath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioA\\ServicioA.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\RAUL\\.nuget\\packages\\dapper\\2.1.66\\dapper.2.1.66.nupkg.sha512",
     "C:\\Users\\RAUL\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
