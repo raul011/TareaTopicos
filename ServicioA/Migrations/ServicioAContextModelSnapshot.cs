@@ -21,6 +21,54 @@ namespace ServicioA.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.Estudiante", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Apellido")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CarnetIdentidad")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Correo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NumeroRegistro")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Estudiantes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Apellido = "Fernandez",
+                            CarnetIdentidad = "7894561",
+                            Correo = "maria@uagrm.edu.bo",
+                            Nombre = "Maria",
+                            NumeroRegistro = "20251234",
+                            PasswordHash = "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq"
+                        });
+                });
+
             modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.Materia", b =>
                 {
                     b.Property<int>("Id")

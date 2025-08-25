@@ -1,3 +1,4 @@
+//ServicioA/Data/ServicioAContext.cs
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Models;
 
@@ -8,6 +9,8 @@ namespace TAREATOPICOS.ServicioA.Data
         public DbSet<PlanEstudio> PlanesEstudio { get; set; }
         public DbSet<Materia> Materias { get; set; }
         public DbSet<PlanMateria> PlanMaterias { get; set; }
+
+        public DbSet<Estudiante> Estudiantes { get; set; }
 
         public ServicioAContext(DbContextOptions<ServicioAContext> options)
             : base(options)
@@ -38,6 +41,8 @@ namespace TAREATOPICOS.ServicioA.Data
             // Datos iniciales (Seeder)
             TAREATOPICOS.ServicioA.Data.Seeders.MateriaSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.PlanEstudioSeeder.Seed(modelBuilder);
+            TAREATOPICOS.ServicioA.Data.Seeders.EstudianteSeeder.Seed(modelBuilder);
+
         }
 
         
