@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Dtos;
 namespace TAREATOPICOS.ServicioA.Controllers
 {
+    /*
     [ApiController]
     [Route("api/[controller]")]
     public class PlanesController : ControllerBase
@@ -38,11 +39,14 @@ namespace TAREATOPICOS.ServicioA.Controllers
             return Ok(planes);
         }
 
-  
+   
         
        
        
 
         
     }
+
+
+    */
 }

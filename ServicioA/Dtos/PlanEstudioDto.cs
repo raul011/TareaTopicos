@@ -1,10 +1,13 @@
 namespace TAREATOPICOS.ServicioA.Dtos;
 
-public class PlanEstudioDto
-{
-    public int Id { get; set; }
-    public required string Nombre { get; set; }
-    public int Anio { get; set; }
-    public List<MateriaDto> Materias { get; set; } = new();
-}
+public class PlanDeEstudioDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = null!;
+        public string? Codigo { get; set; }
+        public DateTime Fecha { get; set; }
+        public string Estado { get; set; } = "ACTIVO";
+        public int CarreraId { get; set; }
+    }
+
 

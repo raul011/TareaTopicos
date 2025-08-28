@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioA\\ServicioA.csproj": {}
+    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj": {}
   },
   "projects": {
-    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioA\\ServicioA.csproj": {
+    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioA\\ServicioA.csproj",
+        "projectUniqueName": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj",
         "projectName": "ServicioA",
-        "projectPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioA\\ServicioA.csproj",
+        "projectPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj",
         "packagesPath": "C:\\Users\\RAUL\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioA\\obj\\",
+        "outputPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

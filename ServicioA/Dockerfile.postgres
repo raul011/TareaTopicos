@@ -1,8 +1,0 @@
-FROM postgres:15
-
-COPY db/init.sql /docker-entrypoint-initdb.d/
-
-# Variables de entorno
-ENV POSTGRES_DB=universidad
-ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=postgres
