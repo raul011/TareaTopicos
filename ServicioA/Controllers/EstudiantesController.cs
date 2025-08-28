@@ -1,5 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
@@ -11,8 +15,15 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 public class EstudiantesController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public EstudiantesController(ServicioAContext context) => _context = context;
+    private readonly IConfiguration _configuration;
 
+    public EstudiantesController(ServicioAContext context, IConfiguration configuration)
+    {
+        _context = context;
+        _configuration = configuration;
+    }
+
+    // ========== CRUD ==========
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EstudianteDto>>> GetAll(CancellationToken ct)
     {
@@ -30,6 +41,8 @@ public class EstudiantesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<EstudianteDto>> Create([FromBody] EstudianteDto dto, CancellationToken ct)
     {
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password); // 🔑 Hash de contraseña
+
         var e = new Estudiante
         {
             Registro = dto.Registro,
@@ -39,7 +52,8 @@ public class EstudiantesController : ControllerBase
             Telefono = dto.Telefono,
             Direccion = dto.Direccion,
             Estado = string.IsNullOrWhiteSpace(dto.Estado) ? "ACTIVO" : dto.Estado,
-            CarreraId = dto.CarreraId
+            CarreraId = dto.CarreraId,
+            PasswordHash = passwordHash
         };
         _context.Estudiantes.Add(e);
         await _context.SaveChangesAsync(ct);
@@ -61,6 +75,11 @@ public class EstudiantesController : ControllerBase
         e.Estado = dto.Estado;
         e.CarreraId = dto.CarreraId;
 
+        if (!string.IsNullOrEmpty(dto.Password))
+        {
+            e.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+        }
+
         await _context.SaveChangesAsync(ct);
         return NoContent();
     }
@@ -75,6 +94,45 @@ public class EstudiantesController : ControllerBase
         return NoContent();
     }
 
+    // ========== LOGIN ==========
+    [HttpPost("login")]
+        public IActionResult Login([FromBody] LoginDto login)
+        {
+            var estudiante = _context.Estudiantes
+                .FirstOrDefault(e => e.Registro == login.Registro);
+
+            if (estudiante == null || !BCrypt.Net.BCrypt.Verify(login.Password, estudiante.PasswordHash))
+            {
+                return Unauthorized("Registro o contraseña inválidos ❌");
+            }
+
+            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim("NumeroRegistro", estudiante.Registro),
+                    new Claim("Nombre", estudiante.Nombre)
+                }),
+                Expires = DateTime.UtcNow.AddHours(2),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature
+                ),
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"]
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var jwt = tokenHandler.WriteToken(token);
+
+            return Ok(new { token = jwt });
+        }
+
+
+    // ====== Mapper ======
     private static EstudianteDto ToDTO(Estudiante e) => new()
     {
         Id = e.Id,

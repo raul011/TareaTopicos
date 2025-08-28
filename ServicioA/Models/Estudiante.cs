@@ -4,9 +4,11 @@ namespace TAREATOPICOS.ServicioA.Models;
 public class Estudiante
 {
     public int Id { get; set; }
-    public string Registro { get; set; } = null!;
-    public string Ci { get; set; } = null!;
-    public string Nombre { get; set; } = null!;
+    public string Registro { get; set; } = string.Empty;
+    public string Ci { get; set; } = string.Empty;
+    public string PasswordHash { get; set; } = string.Empty;
+
+    public string Nombre { get; set; } = string.Empty;
     public string Email { get; set; } = null!;
     public string? Telefono { get; set; }
     public string? Direccion { get; set; }

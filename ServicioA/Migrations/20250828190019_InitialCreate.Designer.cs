@@ -12,7 +12,7 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20250828100937_InitialCreate")]
+    [Migration("20250828190019_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -238,6 +238,10 @@ namespace ServicioA.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Registro")
                         .IsRequired()
                         .HasColumnType("text");
@@ -256,11 +260,12 @@ namespace ServicioA.Migrations
                         {
                             Id = 1,
                             CarreraId = 1,
-                            Ci = "111111",
+                            Ci = "7894561",
                             Email = "carlos@uni.edu",
                             Estado = "ACTIVO",
                             Nombre = "Carlos Sánchez",
-                            Registro = "EST001"
+                            PasswordHash = "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq",
+                            Registro = "20251234"
                         },
                         new
                         {
@@ -270,6 +275,7 @@ namespace ServicioA.Migrations
                             Email = "ana@uni.edu",
                             Estado = "ACTIVO",
                             Nombre = "Ana Rodríguez",
+                            PasswordHash = "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq",
                             Registro = "EST002"
                         });
                 });

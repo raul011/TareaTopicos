@@ -11,4 +11,8 @@ public class EstudianteDto
         public string? Direccion { get; set; }
         public string Estado { get; set; } = "ACTIVO";
         public int CarreraId { get; set; }
+
+
+        //  Solo se usa en Create/Update
+        public string? Password { get; set; }
     }

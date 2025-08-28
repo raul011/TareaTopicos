@@ -111,6 +111,7 @@ namespace ServicioA.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Registro = table.Column<string>(type: "text", nullable: false),
                     Ci = table.Column<string>(type: "text", nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: false),
                     Nombre = table.Column<string>(type: "text", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: false),
                     Telefono = table.Column<string>(type: "text", nullable: true),
@@ -415,11 +416,11 @@ namespace ServicioA.Migrations
 
             migrationBuilder.InsertData(
                 table: "Estudiantes",
-                columns: new[] { "Id", "CarreraId", "Ci", "Direccion", "Email", "Estado", "Nombre", "Registro", "Telefono" },
+                columns: new[] { "Id", "CarreraId", "Ci", "Direccion", "Email", "Estado", "Nombre", "PasswordHash", "Registro", "Telefono" },
                 values: new object[,]
                 {
-                    { 1, 1, "111111", null, "carlos@uni.edu", "ACTIVO", "Carlos Sánchez", "EST001", null },
-                    { 2, 2, "222222", null, "ana@uni.edu", "ACTIVO", "Ana Rodríguez", "EST002", null }
+                    { 1, 1, "7894561", null, "carlos@uni.edu", "ACTIVO", "Carlos Sánchez", "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq", "20251234", null },
+                    { 2, 2, "222222", null, "ana@uni.edu", "ACTIVO", "Ana Rodríguez", "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq", "EST002", null }
                 });
 
             migrationBuilder.InsertData(
