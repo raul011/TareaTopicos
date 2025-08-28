@@ -1,30 +1,37 @@
-using Npgsql;
-using Dapper;
+using Microsoft.EntityFrameworkCore;
+using TAREATOPICOS.ServicioA.Data;
+using System.Text.Json.Serialization;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Permitir recibir la cadena de conexión desde appsettings.json o variable de entorno
-var connString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Configurar EF Core con PostgreSQL
+builder.Services.AddDbContext<ServicioAContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddControllers();
+
+/*
+builder.Services.AddControllers()
+    .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        opt.JsonSerializerOptions.WriteIndented = true;
+    });
+*/
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Endpoint de prueba de conexión
-app.MapGet("/test-db", async () =>
+// Swagger para probar  API
+if (app.Environment.IsDevelopment())
 {
-    await using var conn = new NpgsqlConnection(connString);
-    await conn.OpenAsync();
-    return Results.Ok("Conexión a PostgreSQL exitosa!");
-});
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-// Endpoint para listar materias desde la base de datos
-app.MapGet("/materias", async () =>
-{
-    await using var conn = new NpgsqlConnection(connString);
-    var materias = await conn.QueryAsync("SELECT * FROM materias");
-    return Results.Ok(materias);
-});
-
-// Escucha en todas las interfaces (Docker friendly)
-app.Urls.Add("http://0.0.0.0:5000");
+app.MapControllers();
 
 app.Run();

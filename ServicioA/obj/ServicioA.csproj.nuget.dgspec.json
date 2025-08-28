@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\ServicioA\\ServicioA.csproj": {}
+    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj": {}
   },
   "projects": {
-    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\ServicioA\\ServicioA.csproj": {
+    "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\ServicioA\\ServicioA.csproj",
+        "projectUniqueName": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj",
         "projectName": "ServicioA",
-        "projectPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\ServicioA\\ServicioA.csproj",
+        "projectPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj",
         "packagesPath": "C:\\Users\\RAUL\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\ServicioA\\obj\\",
+        "outputPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -57,9 +57,23 @@
               "target": "Package",
               "version": "[8.0.19, )"
             },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.8, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.0.8, )"
+            },
             "Npgsql": {
               "target": "Package",
               "version": "[9.0.3, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[9.0.4, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
