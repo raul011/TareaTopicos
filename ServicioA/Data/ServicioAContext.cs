@@ -13,6 +13,7 @@ namespace TAREATOPICOS.ServicioA.Data
         public DbSet<Nivel> Niveles { get; set; }
         public DbSet<Materia> Materias { get; set; }
         public DbSet<PlanMateria> PlanMaterias { get; set; }
+
         public DbSet<Prerequisito> Prerequisitos { get; set; }
         public DbSet<Docente> Docentes { get; set; }
         public DbSet<Aula> Aulas { get; set; }

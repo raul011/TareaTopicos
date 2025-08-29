@@ -7,11 +7,13 @@ using System.Text;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[AllowAnonymous]
 public class EstudiantesController : ControllerBase
 {
     private readonly ServicioAContext _context;
@@ -23,7 +25,7 @@ public class EstudiantesController : ControllerBase
         _configuration = configuration;
     }
 
-    // ========== CRUD ==========
+    // --------- CRUD ------------------
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EstudianteDto>>> GetAll(CancellationToken ct)
     {
@@ -41,7 +43,7 @@ public class EstudiantesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<EstudianteDto>> Create([FromBody] EstudianteDto dto, CancellationToken ct)
     {
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password); // 🔑 Hash de contraseña
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password); //  Hash de contraseña
 
         var e = new Estudiante
         {
@@ -113,7 +115,7 @@ public class EstudiantesController : ControllerBase
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim("NumeroRegistro", estudiante.Registro),
+                    new Claim("Registro", estudiante.Registro),
                     new Claim("Nombre", estudiante.Nombre)
                 }),
                 Expires = DateTime.UtcNow.AddHours(2),

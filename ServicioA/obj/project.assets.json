@@ -3761,11 +3761,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj",
+      "projectUniqueName": "C:\\Users\\RAUL\\Desktop\\topicosPre\\TareaTopicos\\servicioa\\ServicioA.csproj",
       "projectName": "ServicioA",
-      "projectPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj",
+      "projectPath": "C:\\Users\\RAUL\\Desktop\\topicosPre\\TareaTopicos\\servicioa\\ServicioA.csproj",
       "packagesPath": "C:\\Users\\RAUL\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\obj\\",
+      "outputPath": "C:\\Users\\RAUL\\Desktop\\topicosPre\\TareaTopicos\\servicioa\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

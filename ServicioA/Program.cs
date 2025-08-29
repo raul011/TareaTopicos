@@ -61,7 +61,7 @@ builder.Services.AddAuthentication(options =>
             context.HandleResponse();
             context.Response.StatusCode = 401;
             context.Response.ContentType = "application/json";
-            return context.Response.WriteAsync("{\"error\": \"Acceso denegado: se requiere un token válido\"}");
+            return context.Response.WriteAsync("{\"error\": \"Acceso denegado: se requiere un token válido \"}");
         },
         OnForbidden = context =>
         {

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "uZCCg7LfcEA=",
+  "dgSpecHash": "GWfpMrgNhSg=",
   "success": true,
-  "projectFilePath": "C:\\Users\\RAUL\\source\\repos\\TareaTopicos\\servicioa\\ServicioA.csproj",
+  "projectFilePath": "C:\\Users\\RAUL\\Desktop\\topicosPre\\TareaTopicos\\servicioa\\ServicioA.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\RAUL\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\RAUL\\.nuget\\packages\\dapper\\2.1.66\\dapper.2.1.66.nupkg.sha512",

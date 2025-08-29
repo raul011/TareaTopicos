@@ -12,7 +12,7 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20250828190019_InitialCreate")]
+    [Migration("20250828201914_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
