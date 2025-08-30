@@ -12,7 +12,7 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20250828201914_InitialCreate")]
+    [Migration("20250830052836_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -126,6 +126,9 @@ namespace ServicioA.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("InscripcionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NotaFinal")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");

@@ -3,11 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AulasController : ControllerBase
 {
     private readonly ServicioAContext _context;

@@ -314,6 +314,7 @@ namespace ServicioA.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Codigo = table.Column<string>(type: "text", nullable: false),
                     Estado = table.Column<string>(type: "text", nullable: false),
+                    NotaFinal = table.Column<int>(type: "integer", nullable: true),
                     InscripcionId = table.Column<int>(type: "integer", nullable: false),
                     GrupoMateriaId = table.Column<int>(type: "integer", nullable: false)
                 },
@@ -477,11 +478,11 @@ namespace ServicioA.Migrations
 
             migrationBuilder.InsertData(
                 table: "DetallesInscripciones",
-                columns: new[] { "Id", "Codigo", "Estado", "GrupoMateriaId", "InscripcionId" },
+                columns: new[] { "Id", "Codigo", "Estado", "GrupoMateriaId", "InscripcionId", "NotaFinal" },
                 values: new object[,]
                 {
-                    { 1, "DET001", "INSCRITO", 1, 1 },
-                    { 2, "DET002", "INSCRITO", 2, 2 }
+                    { 1, "DET001", "INSCRITO", 1, 1, null },
+                    { 2, "DET002", "INSCRITO", 2, 2, null }
                 });
 
             migrationBuilder.InsertData(

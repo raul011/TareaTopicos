@@ -125,6 +125,9 @@ namespace ServicioA.Migrations
                     b.Property<int>("InscripcionId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("NotaFinal")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("GrupoMateriaId");
