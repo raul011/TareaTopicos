@@ -6,7 +6,10 @@ using System.Security.Claims;
 using System.Text;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
+using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos;
+
+using TAREATOPICOS.ServicioA.Dtos.response;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
@@ -27,21 +30,25 @@ public class EstudiantesController : ControllerBase
 
     // --------- CRUD ------------------
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<EstudianteDto>>> GetAll(CancellationToken ct)
+   public async Task<ActionResult<IEnumerable<EstudianteResponseDto>>> GetAll(CancellationToken ct)
     {
-        var list = await _context.Estudiantes.AsNoTracking().ToListAsync(ct);
-        return Ok(list.Select(ToDTO));
+        var list = await _context.Estudiantes
+            .AsNoTracking()
+            .Include(e => e.Carrera) // Incluir la carrera para poder mapearla
+            .ToListAsync(ct);
+        return Ok(list.Select(ToResponseDTO));
     }
 
+
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<EstudianteDto>> Get(int id, CancellationToken ct)
+    public async Task<ActionResult<EstudianteRequestDto>> Get(int id, CancellationToken ct)
     {
         var e = await _context.Estudiantes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         return e is null ? NotFound() : Ok(ToDTO(e));
     }
 
     [HttpPost]
-    public async Task<ActionResult<EstudianteDto>> Create([FromBody] EstudianteDto dto, CancellationToken ct)
+    public async Task<ActionResult<EstudianteRequestDto>> Create([FromBody] EstudianteRequestDto dto, CancellationToken ct)
     {
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password); //  Hash de contraseña
 
@@ -63,7 +70,7 @@ public class EstudiantesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] EstudianteDto dto, CancellationToken ct)
+    public async Task<IActionResult> Update(int id, [FromBody] EstudianteRequestDto dto, CancellationToken ct)
     {
         var e = await _context.Estudiantes.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (e is null) return NotFound();
@@ -135,7 +142,7 @@ public class EstudiantesController : ControllerBase
 
 
     // ====== Mapper ======
-    private static EstudianteDto ToDTO(Estudiante e) => new()
+    private static EstudianteRequestDto ToDTO(Estudiante e) => new()
     {
         Id = e.Id,
         Registro = e.Registro,
@@ -146,5 +153,21 @@ public class EstudiantesController : ControllerBase
         Direccion = e.Direccion,
         Estado = e.Estado,
         CarreraId = e.CarreraId
+    };
+
+    private static EstudianteResponseDto ToResponseDTO(Estudiante e) => new()
+    {
+        Registro = e.Registro,
+        Ci = e.Ci,
+        Nombre = e.Nombre,
+        Email = e.Email,
+        Telefono = e.Telefono,
+        Direccion = e.Direccion,
+        Estado = e.Estado,
+        Carrera = new CarreraDto
+        {
+            Id = e.Carrera.Id,
+            Nombre = e.Carrera.Nombre
+        }
     };
 }

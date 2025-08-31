@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
+using TAREATOPICOS.ServicioA.Dtos.request;
+using TAREATOPICOS.ServicioA.Dtos.response;
 using TAREATOPICOS.ServicioA.Dtos;
 using Microsoft.AspNetCore.Authorization;
 
@@ -21,19 +23,20 @@ public class MateriasController : ControllerBase
 
     // GET: api/materias
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<MateriaDto>>> GetAll(CancellationToken ct = default)
-    {
-        var materias = await _context.Materias
-            .AsNoTracking()
-            .OrderBy(m => m.Codigo)
-            .ToListAsync(ct);
+public async Task<ActionResult<IEnumerable<MateriaResponseDto>>> GetAll(CancellationToken ct = default)
+{
+    var materias = await _context.Materias
+        .Include(m => m.Nivel) // Asegura que se cargue el Nivel asociado
+        .AsNoTracking()
+        .OrderBy(m => m.Codigo)
+        .ToListAsync(ct);
 
-        return Ok(materias.Select(ToDto));
-    }
-
+    return Ok(materias.Select(ToResponseDto));
+}
+  
     // GET: api/materias/{id}
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<MateriaDto>> GetById(int id, CancellationToken ct = default)
+    public async Task<ActionResult<MateriaRequestDto>> GetById(int id, CancellationToken ct = default)
     {
         var materia = await _context.Materias
             .AsNoTracking()
@@ -44,7 +47,7 @@ public class MateriasController : ControllerBase
 
     // POST: api/materias
     [HttpPost]
-    public async Task<ActionResult<MateriaDto>> Create([FromBody] MateriaDto dto, CancellationToken ct = default)
+    public async Task<ActionResult<MateriaRequestDto>> Create([FromBody] MateriaRequestDto dto, CancellationToken ct = default)
     {
         var entity = new Materia
         {
@@ -62,7 +65,7 @@ public class MateriasController : ControllerBase
 
     // PUT: api/materias/{id}
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] MateriaDto dto, CancellationToken ct = default)
+    public async Task<IActionResult> Update(int id, [FromBody] MateriaRequestDto dto, CancellationToken ct = default)
     {
         var materia = await _context.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
         if (materia is null) return NotFound();
@@ -89,12 +92,26 @@ public class MateriasController : ControllerBase
     }
 
     // Mapeo interno
-    private static MateriaDto ToDto(Materia m) => new()
+    private static MateriaRequestDto ToDto(Materia m) => new()
     {
         Id = m.Id,
         Codigo = m.Codigo,
         Nombre = m.Nombre,
         Creditos = m.Creditos,
         NivelId = m.NivelId
+    };
+
+    private static MateriaResponseDto ToResponseDto(Materia m) => new()
+    {
+        Id = m.Id,
+        Codigo = m.Codigo,
+        Nombre = m.Nombre,
+        Creditos = m.Creditos,
+        Nivel = new NivelDto
+        {
+            Id = m.Nivel.Id,
+            Numero = m.Nivel.Numero,
+            Nombre = m.Nivel.Nombre
+        }
     };
 }

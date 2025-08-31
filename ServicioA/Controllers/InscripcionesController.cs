@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Dtos.request;
+using TAREATOPICOS.ServicioA.Dtos.response;
+
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
@@ -17,7 +20,7 @@ public class InscripcionesController : ControllerBase
 
     // POST: api/inscripciones
     [HttpPost]
-    public async Task<ActionResult<InscripcionDto>> Create([FromBody] InscripcionDto dto, CancellationToken ct)
+    public async Task<ActionResult<InscripcionRequestDto>> Create([FromBody] InscripcionRequestDto dto, CancellationToken ct)
     {
         var existeEst = await _context.Estudiantes.AnyAsync(e => e.Id == dto.EstudianteId, ct);
         var existePer = await _context.PeriodosAcademicos.AnyAsync(p => p.Id == dto.PeriodoId, ct);
@@ -43,15 +46,21 @@ public class InscripcionesController : ControllerBase
 
     // GET: api/inscripciones/{id}
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<InscripcionDto>> GetById(int id, CancellationToken ct)
-    {
-        var i = await _context.Inscripciones.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
-        return i is null ? NotFound() : Ok(ToDTO(i));
-    }
+public async Task<ActionResult<InscripcionResponseDto>> GetById(int id, CancellationToken ct)
+{
+    var i = await _context.Inscripciones
+    .AsNoTracking()
+    .Include(x => x.Estudiante)
+        .ThenInclude(e => e.Carrera)
+    .Include(x => x.Periodo)
+    .FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    return i is null ? NotFound() : Ok(ToResponseDTO(i));
+}
 
     // GET: api/inscripciones/por-estudiante/{estudianteId}
     [HttpGet("por-estudiante/{estudianteId:int}")]
-    public async Task<ActionResult<IEnumerable<InscripcionDto>>> GetByEstudiante(int estudianteId, [FromQuery] int? periodoId, CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<InscripcionResponseDto>>> GetByEstudiante(int estudianteId, [FromQuery] int? periodoId, CancellationToken ct)
     {
         var query = _context.Inscripciones.AsNoTracking()
             .Where(i => i.EstudianteId == estudianteId);
@@ -88,7 +97,7 @@ public class InscripcionesController : ControllerBase
     }
 
     // Utilidades de mapeo
-    private static InscripcionDto ToDTO(Inscripcion i) => new()
+    private static InscripcionRequestDto ToDTO(Inscripcion i) => new()
     {
         Id = i.Id,
         Fecha = i.Fecha,
@@ -96,6 +105,35 @@ public class InscripcionesController : ControllerBase
         EstudianteId = i.EstudianteId,
         PeriodoId = i.PeriodoId
     };
+   
+   //PARA LECTURA DE OBJETOS DENTRO DE INSCRIPCION
+   private static InscripcionResponseDto ToResponseDTO(Inscripcion i) => new()
+     {
+    Id = i.Id,
+    Fecha = i.Fecha,
+    Estado = i.Estado,
+    Estudiante = new EstudianteResponseDto
+    {
+        Registro = i.Estudiante.Registro,
+        Ci = i.Estudiante.Ci,
+        Nombre = i.Estudiante.Nombre,
+        Email = i.Estudiante.Email,
+        Telefono = i.Estudiante.Telefono,
+        Direccion = i.Estudiante.Direccion,
+        Estado = i.Estudiante.Estado,
+        Carrera = new CarreraDto
+        {
+            Id = i.Estudiante.Carrera.Id,
+            Nombre = i.Estudiante.Carrera.Nombre
+        }
+    },
+    Periodo = new PeriodoAcademicoResponseDto
+    {
+        Gestion = i.Periodo.Gestion,
+        FechaInicio = i.Periodo.FechaInicio,
+        FechaFin = i.Periodo.FechaFin
+    }
+};
 
     private static DetalleInscripcionDto ToDTO(DetalleInscripcion d) => new()
     {

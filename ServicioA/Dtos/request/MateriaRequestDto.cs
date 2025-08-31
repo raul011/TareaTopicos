@@ -1,6 +1,6 @@
-namespace TAREATOPICOS.ServicioA.Dtos;
+namespace TAREATOPICOS.ServicioA.Dtos.request;
 
-public class MateriaDto
+public class MateriaRequestDto
     {
         public int Id { get; set; }
         public string Codigo { get; set; } = null!;
