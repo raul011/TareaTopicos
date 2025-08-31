@@ -32,7 +32,7 @@ public class NivelesController : ControllerBase
         _store.Add(transaccion);
         _queue.Enqueue(transaccion);
 
-        // 👇 devolvemos el ID de la transacción (Guid)
+        //  devolvemos el ID de la transacción (Guid)
         return Ok(new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
