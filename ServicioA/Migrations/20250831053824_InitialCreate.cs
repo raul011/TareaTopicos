@@ -401,9 +401,11 @@ namespace ServicioA.Migrations
                 columns: new[] { "Id", "Nombre", "Numero" },
                 values: new object[,]
                 {
-                    { 1, "Primer Nivel", 1 },
-                    { 2, "Segundo Nivel", 2 },
-                    { 3, "Tercer Nivel", 3 }
+                    { 1, "1er Semestre", 1 },
+                    { 2, "2do Semestre", 2 },
+                    { 3, "3er Semestre", 3 },
+                    { 4, "4to Semestre", 4 },
+                    { 5, "5to Semestre", 5 }
                 });
 
             migrationBuilder.InsertData(
@@ -429,9 +431,31 @@ namespace ServicioA.Migrations
                 columns: new[] { "Id", "Codigo", "Creditos", "NivelId", "Nombre" },
                 values: new object[,]
                 {
-                    { 1, "MAT101", 5, 1, "Matemáticas I" },
-                    { 2, "PRG101", 5, 1, "Programación I" },
-                    { 3, "BD101", 4, 2, "Bases de Datos" }
+                    { 1, "MAT101", 15, 1, "CALCULO I" },
+                    { 2, "INF119", 20, 1, "ESTRUCTURAS DISCRETAS" },
+                    { 3, "INF110", 20, 1, "INTRODUCCION A LA INFORMATICA" },
+                    { 4, "FIS100", 15, 1, "FISICA I" },
+                    { 5, "LIN100", 15, 1, "INGLES I" },
+                    { 6, "MAT102", 20, 2, "CALCULO II" },
+                    { 7, "MAT103", 20, 2, "ALGEBRA LINEAL" },
+                    { 8, "INF120", 20, 2, "PROGRAMACION I" },
+                    { 9, "FIS102", 20, 2, "FISICA II" },
+                    { 10, "LIN101", 20, 2, "INGLES II" },
+                    { 11, "MAT207", 20, 3, "ECUACIONES DIFERENCIALES" },
+                    { 12, "INF210", 20, 3, "PROGRAMACION II" },
+                    { 13, "INF211", 20, 3, "ARQUITECTURA DE COMPUTADORAS" },
+                    { 14, "FIS200", 20, 3, "FISICA III" },
+                    { 15, "ADM100", 20, 3, "ADMINISTRACION" },
+                    { 16, "MAT202", 20, 4, "PROBABILIDAD Y ESTADISTICA I" },
+                    { 17, "MAT205", 20, 4, "METODOS NUMERICOS" },
+                    { 18, "INF220", 20, 4, "ESTRUCTURA DE DATOS I" },
+                    { 19, "INF221", 20, 4, "PROGRAMACION ENSAMBLADOR" },
+                    { 20, "ADM200", 20, 4, "CONTABILIDAD" },
+                    { 21, "MAT302", 20, 5, "PROBABILIDAD Y ESTADISTICA II" },
+                    { 22, "INF318", 20, 5, "PROGRAMACION LOGICA Y FUNCIONAL" },
+                    { 23, "INF310", 20, 5, "ESTRUCTURA DE DATOS II" },
+                    { 24, "INF312", 20, 5, "BASE DE DATOS I" },
+                    { 25, "INF319", 20, 5, "LENGUAJES FORMALES" }
                 });
 
             migrationBuilder.InsertData(
@@ -474,7 +498,30 @@ namespace ServicioA.Migrations
             migrationBuilder.InsertData(
                 table: "Prerequisitos",
                 columns: new[] { "Id", "MateriaId", "MateriaPrerequisitoId", "NotaMin", "Tipo" },
-                values: new object[] { 1, 3, 1, 60m, "Académico" });
+                values: new object[,]
+                {
+                    { 1, 6, 1, 51m, "OBLIGATORIO" },
+                    { 2, 7, 2, 51m, "OBLIGATORIO" },
+                    { 3, 8, 3, 51m, "OBLIGATORIO" },
+                    { 4, 9, 4, 51m, "OBLIGATORIO" },
+                    { 5, 10, 5, 51m, "OBLIGATORIO" },
+                    { 6, 11, 6, 51m, "OBLIGATORIO" },
+                    { 7, 12, 7, 51m, "OBLIGATORIO" },
+                    { 8, 12, 8, 51m, "OBLIGATORIO" },
+                    { 9, 13, 8, 51m, "OBLIGATORIO" },
+                    { 10, 13, 9, 51m, "OBLIGATORIO" },
+                    { 11, 14, 9, 51m, "OBLIGATORIO" },
+                    { 12, 16, 6, 51m, "OBLIGATORIO" },
+                    { 13, 17, 11, 51m, "OBLIGATORIO" },
+                    { 14, 18, 12, 51m, "OBLIGATORIO" },
+                    { 15, 19, 13, 51m, "OBLIGATORIO" },
+                    { 16, 20, 15, 51m, "OBLIGATORIO" },
+                    { 17, 21, 16, 51m, "OBLIGATORIO" },
+                    { 18, 22, 18, 51m, "OBLIGATORIO" },
+                    { 19, 23, 18, 51m, "OBLIGATORIO" },
+                    { 20, 24, 18, 51m, "OBLIGATORIO" },
+                    { 21, 25, 18, 51m, "OBLIGATORIO" }
+                });
 
             migrationBuilder.InsertData(
                 table: "DetallesInscripciones",

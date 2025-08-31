@@ -528,25 +528,201 @@ namespace ServicioA.Migrations
                         {
                             Id = 1,
                             Codigo = "MAT101",
-                            Creditos = 5,
+                            Creditos = 15,
                             NivelId = 1,
-                            Nombre = "Matemáticas I"
+                            Nombre = "CALCULO I"
                         },
                         new
                         {
                             Id = 2,
-                            Codigo = "PRG101",
-                            Creditos = 5,
+                            Codigo = "INF119",
+                            Creditos = 20,
                             NivelId = 1,
-                            Nombre = "Programación I"
+                            Nombre = "ESTRUCTURAS DISCRETAS"
                         },
                         new
                         {
                             Id = 3,
-                            Codigo = "BD101",
-                            Creditos = 4,
+                            Codigo = "INF110",
+                            Creditos = 20,
+                            NivelId = 1,
+                            Nombre = "INTRODUCCION A LA INFORMATICA"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Codigo = "FIS100",
+                            Creditos = 15,
+                            NivelId = 1,
+                            Nombre = "FISICA I"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Codigo = "LIN100",
+                            Creditos = 15,
+                            NivelId = 1,
+                            Nombre = "INGLES I"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Codigo = "MAT102",
+                            Creditos = 20,
                             NivelId = 2,
-                            Nombre = "Bases de Datos"
+                            Nombre = "CALCULO II"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Codigo = "MAT103",
+                            Creditos = 20,
+                            NivelId = 2,
+                            Nombre = "ALGEBRA LINEAL"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Codigo = "INF120",
+                            Creditos = 20,
+                            NivelId = 2,
+                            Nombre = "PROGRAMACION I"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Codigo = "FIS102",
+                            Creditos = 20,
+                            NivelId = 2,
+                            Nombre = "FISICA II"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Codigo = "LIN101",
+                            Creditos = 20,
+                            NivelId = 2,
+                            Nombre = "INGLES II"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Codigo = "MAT207",
+                            Creditos = 20,
+                            NivelId = 3,
+                            Nombre = "ECUACIONES DIFERENCIALES"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Codigo = "INF210",
+                            Creditos = 20,
+                            NivelId = 3,
+                            Nombre = "PROGRAMACION II"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Codigo = "INF211",
+                            Creditos = 20,
+                            NivelId = 3,
+                            Nombre = "ARQUITECTURA DE COMPUTADORAS"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Codigo = "FIS200",
+                            Creditos = 20,
+                            NivelId = 3,
+                            Nombre = "FISICA III"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Codigo = "ADM100",
+                            Creditos = 20,
+                            NivelId = 3,
+                            Nombre = "ADMINISTRACION"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Codigo = "MAT202",
+                            Creditos = 20,
+                            NivelId = 4,
+                            Nombre = "PROBABILIDAD Y ESTADISTICA I"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Codigo = "MAT205",
+                            Creditos = 20,
+                            NivelId = 4,
+                            Nombre = "METODOS NUMERICOS"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Codigo = "INF220",
+                            Creditos = 20,
+                            NivelId = 4,
+                            Nombre = "ESTRUCTURA DE DATOS I"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Codigo = "INF221",
+                            Creditos = 20,
+                            NivelId = 4,
+                            Nombre = "PROGRAMACION ENSAMBLADOR"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Codigo = "ADM200",
+                            Creditos = 20,
+                            NivelId = 4,
+                            Nombre = "CONTABILIDAD"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Codigo = "MAT302",
+                            Creditos = 20,
+                            NivelId = 5,
+                            Nombre = "PROBABILIDAD Y ESTADISTICA II"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Codigo = "INF318",
+                            Creditos = 20,
+                            NivelId = 5,
+                            Nombre = "PROGRAMACION LOGICA Y FUNCIONAL"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Codigo = "INF310",
+                            Creditos = 20,
+                            NivelId = 5,
+                            Nombre = "ESTRUCTURA DE DATOS II"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Codigo = "INF312",
+                            Creditos = 20,
+                            NivelId = 5,
+                            Nombre = "BASE DE DATOS I"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Codigo = "INF319",
+                            Creditos = 20,
+                            NivelId = 5,
+                            Nombre = "LENGUAJES FORMALES"
                         });
                 });
 
@@ -573,20 +749,32 @@ namespace ServicioA.Migrations
                         new
                         {
                             Id = 1,
-                            Nombre = "Primer Nivel",
+                            Nombre = "1er Semestre",
                             Numero = 1
                         },
                         new
                         {
                             Id = 2,
-                            Nombre = "Segundo Nivel",
+                            Nombre = "2do Semestre",
                             Numero = 2
                         },
                         new
                         {
                             Id = 3,
-                            Nombre = "Tercer Nivel",
+                            Nombre = "3er Semestre",
                             Numero = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Nombre = "4to Semestre",
+                            Numero = 4
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Nombre = "5to Semestre",
+                            Numero = 5
                         });
                 });
 
@@ -765,10 +953,170 @@ namespace ServicioA.Migrations
                         new
                         {
                             Id = 1,
-                            MateriaId = 3,
+                            MateriaId = 6,
                             MateriaPrerequisitoId = 1,
-                            NotaMin = 60m,
-                            Tipo = "Académico"
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            MateriaId = 7,
+                            MateriaPrerequisitoId = 2,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            MateriaId = 8,
+                            MateriaPrerequisitoId = 3,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            MateriaId = 9,
+                            MateriaPrerequisitoId = 4,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            MateriaId = 10,
+                            MateriaPrerequisitoId = 5,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            MateriaId = 11,
+                            MateriaPrerequisitoId = 6,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            MateriaId = 12,
+                            MateriaPrerequisitoId = 7,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            MateriaId = 12,
+                            MateriaPrerequisitoId = 8,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            MateriaId = 13,
+                            MateriaPrerequisitoId = 8,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            MateriaId = 13,
+                            MateriaPrerequisitoId = 9,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            MateriaId = 14,
+                            MateriaPrerequisitoId = 9,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            MateriaId = 16,
+                            MateriaPrerequisitoId = 6,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            MateriaId = 17,
+                            MateriaPrerequisitoId = 11,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            MateriaId = 18,
+                            MateriaPrerequisitoId = 12,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            MateriaId = 19,
+                            MateriaPrerequisitoId = 13,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            MateriaId = 20,
+                            MateriaPrerequisitoId = 15,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            MateriaId = 21,
+                            MateriaPrerequisitoId = 16,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            MateriaId = 22,
+                            MateriaPrerequisitoId = 18,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            MateriaId = 23,
+                            MateriaPrerequisitoId = 18,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            MateriaId = 24,
+                            MateriaPrerequisitoId = 18,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            MateriaId = 25,
+                            MateriaPrerequisitoId = 18,
+                            NotaMin = 51m,
+                            Tipo = "OBLIGATORIO"
                         });
                 });
 
