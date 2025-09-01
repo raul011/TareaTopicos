@@ -20,20 +20,54 @@ public class MateriasController : ControllerBase
     {
         _context = context;
     }
-
+    /*
     // GET: api/materias
     [HttpGet]
-public async Task<ActionResult<IEnumerable<MateriaResponseDto>>> GetAll(CancellationToken ct = default)
-{
-    var materias = await _context.Materias
-        .Include(m => m.Nivel) // Asegura que se cargue el Nivel asociado
-        .AsNoTracking()
-        .OrderBy(m => m.Codigo)
-        .ToListAsync(ct);
+    public async Task<ActionResult<IEnumerable<MateriaResponseDto>>> GetAll(CancellationToken ct = default)
+    {
+        var materias = await _context.Materias
+            .Include(m => m.Nivel) // Asegura que se cargue el Nivel asociado
+            .AsNoTracking()
+            .OrderBy(m => m.Codigo)
+            .ToListAsync(ct);
 
-    return Ok(materias.Select(ToResponseDto));
-}
-  
+        return Ok(materias.Select(ToResponseDto));
+    }
+
+   */
+
+    // GET: api/materias?page=1&pageSize=10
+    [HttpGet]
+    public async Task<ActionResult> GetAll(
+     [FromQuery] int page = 1,
+     [FromQuery] int pageSize = 5,
+     CancellationToken ct = default)
+    {
+        if (page <= 0 || pageSize <= 0)
+            return BadRequest("Los parámetros de paginación deben ser mayores a cero.");
+
+        var query = _context.Materias
+            .Include(m => m.Nivel)
+            .AsNoTracking()
+            .OrderBy(m => m.Codigo);
+
+        var totalItems = await query.CountAsync(ct);
+        var materias = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var result = new
+        {
+            TotalItems = totalItems,
+            Page = page,
+            PageSize = pageSize,
+            Items = materias.Select(ToResponseDto)
+        };
+
+        return Ok(result);
+    }
+
     // GET: api/materias/{id}
     [HttpGet("{id:int}")]
     public async Task<ActionResult<MateriaRequestDto>> GetById(int id, CancellationToken ct = default)
