@@ -1,6 +1,6 @@
-namespace   TAREATOPICOS.ServicioA.Dtos;
+namespace   TAREATOPICOS.ServicioA.Dtos.request;
 
-public class InscripcionDto
+public class InscripcionRequestDto
     {
         public int Id { get; set; }
         public DateTime Fecha { get; set; }

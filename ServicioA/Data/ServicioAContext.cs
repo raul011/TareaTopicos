@@ -83,15 +83,15 @@ namespace TAREATOPICOS.ServicioA.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Seeders opcionales
+            TAREATOPICOS.ServicioA.Data.Seeders.NivelSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.MateriaSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.PlanDeEstudioSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.CarreraSeeder.Seed(modelBuilder);
-            TAREATOPICOS.ServicioA.Data.Seeders.NivelSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.PlanMateriaSeeder.Seed(modelBuilder);
-            TAREATOPICOS.ServicioA.Data.Seeders.PrerequisitoSeeder.Seed (modelBuilder);
-            TAREATOPICOS.ServicioA.Data.Seeders.DocenteSeeder.Seed(modelBuilder );
-            TAREATOPICOS.ServicioA.Data.Seeders.AulaSeeder.Seed(modelBuilder        );
-            TAREATOPICOS.ServicioA.Data.Seeders.HorarioSeeder.Seed(modelBuilder    );
+            TAREATOPICOS.ServicioA.Data.Seeders.PrerequisitoSeeder.Seed(modelBuilder);
+            TAREATOPICOS.ServicioA.Data.Seeders.DocenteSeeder.Seed(modelBuilder);
+            TAREATOPICOS.ServicioA.Data.Seeders.AulaSeeder.Seed(modelBuilder);
+            TAREATOPICOS.ServicioA.Data.Seeders.HorarioSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.PeriodoAcademicoSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.GrupoMateriaSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.InscripcionSeeder.Seed(modelBuilder);

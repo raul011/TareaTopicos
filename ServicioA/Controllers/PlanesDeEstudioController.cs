@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
+using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos;
 using Microsoft.AspNetCore.Authorization;
 
@@ -76,7 +77,7 @@ public class PlanesDeEstudioController : ControllerBase
     
     // GET api/planesdeestudio/{id}/materias
 [HttpGet("{id:int}/materias")]
-public async Task<ActionResult<IEnumerable<MateriaDto>>> GetMateriasDePlan(int id, CancellationToken ct = default)
+public async Task<ActionResult<IEnumerable<MateriaRequestDto>>> GetMateriasDePlan(int id, CancellationToken ct = default)
 {
     // 1. Validar existencia del plan
     var existePlan = await _context.PlanesEstudio
@@ -91,7 +92,7 @@ public async Task<ActionResult<IEnumerable<MateriaDto>>> GetMateriasDePlan(int i
         .AsNoTracking()
         .Where(pm => pm.PlanId == id)
         .Include(pm => pm.Materia) // Incluimos datos de Materia
-        .Select(pm => new MateriaDto
+        .Select(pm => new MateriaRequestDto
         {
             Id = pm.Materia.Id,
             Codigo = pm.Materia.Codigo,

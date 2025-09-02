@@ -1,8 +1,8 @@
-namespace TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Dtos;
+namespace TAREATOPICOS.ServicioA.Dtos.response;
 
-public class EstudianteDto
+public class EstudianteResponseDto
     {
-        public int Id { get; set; }
         public string Registro { get; set; } = null!;
         public string Ci { get; set; } = null!;
         public string Nombre { get; set; } = null!;
@@ -10,9 +10,6 @@ public class EstudianteDto
         public string? Telefono { get; set; }
         public string? Direccion { get; set; }
         public string Estado { get; set; } = "ACTIVO";
-        public int CarreraId { get; set; }
+        public CarreraDto Carrera { get; set; } = null!;
 
-
-        //  Solo se usa en Create/Update
-        public string? Password { get; set; }
     }
