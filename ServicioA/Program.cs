@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using System.Text.Json.Serialization;
-
+using TAREATOPICOS.ServicioA.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -73,6 +73,16 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+builder.Services.AddSingleton<TransaccionStore>();
+builder.Services.AddHostedService<Worker>();
+
+
+
+
+
+
 
 var app = builder.Build();
 

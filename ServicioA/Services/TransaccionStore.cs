@@ -1,3 +1,4 @@
+// tareatopicos.ServicioA/Services/TransaccionStore.cs
 using System.Collections.Concurrent;
 using TAREATOPICOS.ServicioA.Models;
 
