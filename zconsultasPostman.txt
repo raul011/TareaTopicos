@@ -1,0 +1,21 @@
+Post
+http://localhost:5112/api/estudiantes/login
+{
+  "Registro": "20251234",
+  "password": "7894561"
+}
+
+
+
+services/IBackgroundTaskQueue.cs
+R. define que metodo debe implementar en la cola
+Services/BackgroundTaskQueue.cs
+R. implementa la cola en memoria para alamacenar las transacciones aqui se acumulan las transacciones
+Services/TransaccionStore.cs
+R. guarda en memoria el estado de cada transaccion y puede conultar el estado por el id
+Services/Worker.cs
+R. servicio en segundo plano 
+saca una transaccion de la cola lo cambia de estado lo deserializa para obtener el obtener
+el objeto original
+ejecuta la logica en la BD 
+y marca la transaccion como completado o error

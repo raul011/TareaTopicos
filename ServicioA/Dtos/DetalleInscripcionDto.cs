@@ -1,3 +1,4 @@
+//TareaTopicos/ServicioA/Dtos/DetalleInscripcionDto.cs
 namespace TAREATOPICOS.ServicioA.Dtos;
 
 public class DetalleInscripcionDto

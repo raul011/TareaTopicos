@@ -21,26 +21,27 @@ class Program
 
         Console.WriteLine(" Enviando transacciones (POST, PUT, DELETE)...");
 
-        // 1) Mandamos 5 POST → crear niveles
+        //  5 POST para crear niveles
         for (int i = 1; i <= 5; i++)
         {
             var nivel = new { numero = i, nombre = $"Nivel {i}" };
             await EnviarTransaccion(client, $"{baseUrl}/async", nivel, transacciones, HttpMethod.Post);
         }
 
-        // 2) Mandamos 2 PUT → actualizar niveles
+        // 2 PUT para actualizar niveles
         for (int i = 1; i <= 2; i++)
         {
             var nivel = new { id = i, numero = i, nombre = $"Nivel {i} (Actualizado)" };
             await EnviarTransaccion(client, $"{baseUrl}/async/{i}", nivel, transacciones, HttpMethod.Put);
         }
 
-        // 3) Mandamos 1 DELETE → borrar un nivel
+        // 1 DELETE para borrar un nivel
+        // ojo pasar id que haya en los datos
         await EnviarTransaccion(client, $"{baseUrl}/async/7", null, transacciones, HttpMethod.Delete);
 
         Console.WriteLine("\n Consultando estados cada 2 segundos...\n");
 
-        // 4) Consultamos estado de cada transacción hasta que todas estén COMPLETADO o ERROR
+        // consultamos el estado de cada transacción hasta que esten todas "completa" o "error"
         bool todasCompletadas = false;
         while (!todasCompletadas)
         {
@@ -71,7 +72,7 @@ class Program
                 }
             }
 
-            await Task.Delay(2000); // espera 2 segundos entre rondas
+            await Task.Delay(2000); // para verlo mejor 2 segundos
             Console.WriteLine("----------------------------");
         }
 

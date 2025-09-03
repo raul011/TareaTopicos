@@ -1,3 +1,4 @@
+//TareaTopicos/ServicioA/Dtos/response/PeriodoAcademicoResponseDto.cs
 namespace TAREATOPICOS.ServicioA.Dtos.response;
 
 public class PeriodoAcademicoResponseDto

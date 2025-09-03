@@ -9,8 +9,8 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 [Route("api/[controller]")]
 public class NivelesController : ControllerBase
 {
-    private readonly IBackgroundTaskQueue _queue;
-    private readonly TransaccionStore _store;
+    private readonly IBackgroundTaskQueue _queue; //encola la transaccion
+    private readonly TransaccionStore _store; // almacena las transacciones
 
     public NivelesController(IBackgroundTaskQueue queue, TransaccionStore store)
     {
@@ -18,7 +18,7 @@ public class NivelesController : ControllerBase
         _store = store;
     }
 
-    // POST asincrónico → crear nivel
+    // post crearmos un nivel
     [HttpPost("async")]
     public IActionResult CrearNivelAsync([FromBody] Nivel nivel)
     {
@@ -32,15 +32,15 @@ public class NivelesController : ControllerBase
         _store.Add(transaccion);
         _queue.Enqueue(transaccion);
 
-        //  devolvemos el ID de la transacción (Guid)
+       // devuelve el id de la transaccion y el estado inicial
         return Ok(new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
-    // PUT asincrónico → actualizar nivel
+    //  
     [HttpPut("async/{id:int}")]
     public IActionResult ActualizarNivelAsync(int id, [FromBody] Nivel nivel)
     {
-        nivel.Id = id; // el ID real del Nivel (int)
+        nivel.Id = id;  
 
         var transaccion = new Transaccion
         {
@@ -55,7 +55,7 @@ public class NivelesController : ControllerBase
         return Ok(new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
-    // DELETE asincrónico → eliminar nivel
+    // DELETE 
     [HttpDelete("async/{id:int}")]
     public IActionResult EliminarNivelAsync(int id)
     {
@@ -72,7 +72,7 @@ public class NivelesController : ControllerBase
         return Ok(new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
-    // Consultar estado de una transacción
+     
     [HttpGet("estado/{id:guid}")]
     public IActionResult GetEstado(Guid id)
     {

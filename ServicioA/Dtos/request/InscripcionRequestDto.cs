@@ -1,3 +1,4 @@
+//TareaTopicos/ServicioA/Dtos/request/InscripcionRequestDto.cs
 namespace   TAREATOPICOS.ServicioA.Dtos.request;
 
 public class InscripcionRequestDto

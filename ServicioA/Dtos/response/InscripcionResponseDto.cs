@@ -1,3 +1,4 @@
+//TareaTopicos/ServicioA/Dtos/response/InscripcionResponseDto.cs
 using TAREATOPICOS.ServicioA.Dtos;
 using TAREATOPICOS.ServicioA.Dtos.response;
 

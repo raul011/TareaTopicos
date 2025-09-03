@@ -15,3 +15,4 @@ public class Transaccion
     public string? Payload { get; set; }            // Datos serializados en JSON
     public string Estado { get; set; } = "EN_COLA";
 }
+// registramos todas las transacciones
