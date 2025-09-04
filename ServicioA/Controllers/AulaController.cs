@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Services;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
@@ -13,7 +15,17 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 public class AulasController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public AulasController(ServicioAContext context) => _context = context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly RedisTransaccionStore _store;
+
+
+    public AulasController(ServicioAContext context, IBackgroundTaskQueue queue, RedisTransaccionStore store)
+
+    {
+        _context = context;
+        _queue = queue;
+        _store = store;
+    }
 
     // GET api/aulas
     [HttpGet]
@@ -55,6 +67,23 @@ public class AulasController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDTO(entity));
     }
 
+    // POST asincrónico: api/aulas/async
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] AulaDto dto)
+    {
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "POST",
+            Entidad = "Aula",
+            Payload = JsonSerializer.Serialize(dto)
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
+    }
+
     // PUT api/aulas/{id}
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] AulaDto dto, CancellationToken ct = default)
@@ -70,6 +99,24 @@ public class AulasController : ControllerBase
         return NoContent();
     }
 
+    // PUT asincrónico: api/aulas/async/{id}
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] AulaDto dto)
+    {
+        dto.Id = id; // Aseguramos que el ID del DTO coincida con el de la URL
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "PUT",
+            Entidad = "Aula",
+            Payload = JsonSerializer.Serialize(dto)
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
+    }
+
     // DELETE api/aulas/{id}
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
@@ -80,6 +127,23 @@ public class AulasController : ControllerBase
         _context.Aulas.Remove(aula);
         await _context.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    // DELETE asincrónico: api/aulas/async/{id}
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id)
+    {
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "DELETE",
+            Entidad = "Aula",
+            Payload = JsonSerializer.Serialize(new { Id = id })
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
     private static AulaDto ToDTO(Aula a) => new()

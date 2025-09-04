@@ -6,6 +6,8 @@ using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos.response;
 using TAREATOPICOS.ServicioA.Dtos;
 using Microsoft.AspNetCore.Authorization;
+using TAREATOPICOS.ServicioA.Services;
+using System.Text.Json;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
@@ -15,10 +17,14 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 public class MateriasController : ControllerBase
 {
     private readonly ServicioAContext _context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly RedisTransaccionStore _store;
 
-    public MateriasController(ServicioAContext context)
+    public MateriasController(ServicioAContext context, IBackgroundTaskQueue queue, RedisTransaccionStore store)
     {
         _context = context;
+        _queue = queue;
+        _store = store;
     }
     /*
     // GET: api/materias
@@ -97,6 +103,23 @@ public class MateriasController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
     }
 
+    // POST asincrónico: api/materias/async
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] MateriaRequestDto dto)
+    {
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "POST",
+            Entidad = "Materia",
+            Payload = JsonSerializer.Serialize(dto)
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
+    }
+
     // PUT: api/materias/{id}
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] MateriaRequestDto dto, CancellationToken ct = default)
@@ -113,6 +136,24 @@ public class MateriasController : ControllerBase
         return NoContent();
     }
 
+    // PUT asincrónico: api/materias/async/{id}
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] MateriaRequestDto dto)
+    {
+        dto.Id = id;
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "PUT",
+            Entidad = "Materia",
+            Payload = JsonSerializer.Serialize(dto)
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
+    }
+
     // DELETE: api/materias/{id}
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
@@ -123,6 +164,23 @@ public class MateriasController : ControllerBase
         _context.Materias.Remove(materia);
         await _context.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    // DELETE asincrónico: api/materias/async/{id}
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id)
+    {
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "DELETE",
+            Entidad = "Materia",
+            Payload = JsonSerializer.Serialize(new { Id = id })
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
     // Mapeo interno

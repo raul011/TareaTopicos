@@ -16,21 +16,21 @@ public class GruposMateriaController : ControllerBase
 {
     private readonly ServicioAContext _context;
     public GruposMateriaController(ServicioAContext context) => _context = context;
-/*
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<GrupoMateriaResponseDto>>> Get([FromQuery] int? periodoId, [FromQuery] int? materiaId, [FromQuery] bool soloActivos = true, CancellationToken ct = default)
-    {
-        var q = _context.GruposMaterias.AsNoTracking();
+    /*
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<GrupoMateriaResponseDto>>> Get([FromQuery] int? periodoId, [FromQuery] int? materiaId, [FromQuery] bool soloActivos = true, CancellationToken ct = default)
+        {
+            var q = _context.GruposMaterias.AsNoTracking();
 
-        if (periodoId.HasValue) q = q.Where(g => g.PeriodoId == periodoId.Value);
-        if (materiaId.HasValue) q = q.Where(g => g.MateriaId == materiaId.Value);
-        if (soloActivos) q = q.Where(g => g.Estado == "ACTIVO");
+            if (periodoId.HasValue) q = q.Where(g => g.PeriodoId == periodoId.Value);
+            if (materiaId.HasValue) q = q.Where(g => g.MateriaId == materiaId.Value);
+            if (soloActivos) q = q.Where(g => g.Estado == "ACTIVO");
 
-        var items = await q.OrderBy(g => g.MateriaId).ThenBy(g => g.Grupo).ToListAsync(ct);
-        return Ok(items.Select(ToDTO));
-    }
+            var items = await q.OrderBy(g => g.MateriaId).ThenBy(g => g.Grupo).ToListAsync(ct);
+            return Ok(items.Select(ToDTO));
+        }
 
-    */
+        */
     /*
     [HttpGet("{id:int}")]
     public async Task<ActionResult<GrupoMateriaRequestDto>> GetById(int id, CancellationToken ct)
@@ -41,54 +41,54 @@ public class GruposMateriaController : ControllerBase
     */
 
     [HttpGet]
-public async Task<ActionResult<IEnumerable<GrupoMateriaResponseDto>>> GetTodos(CancellationToken ct = default)
-{
-    var grupos = await _context.GruposMaterias
-        .AsNoTracking()
-        .Include(x => x.Materia)
-            .ThenInclude(m => m.Nivel)
-        .Include(x => x.Docente)
-        .Include(x => x.Periodo)
-        .Include(x => x.Horario)
-        .Include(x => x.Aula)
-        .OrderBy(x => x.MateriaId)
-        .ThenBy(x => x.Grupo)
-        .ToListAsync(ct);
+    public async Task<ActionResult<IEnumerable<GrupoMateriaResponseDto>>> GetTodos(CancellationToken ct = default)
+    {
+        var grupos = await _context.GruposMaterias
+            .AsNoTracking()
+            .Include(x => x.Materia)
+                .ThenInclude(m => m.Nivel)
+            .Include(x => x.Docente)
+            .Include(x => x.Periodo)
+            .Include(x => x.Horario)
+            .Include(x => x.Aula)
+            .OrderBy(x => x.MateriaId)
+            .ThenBy(x => x.Grupo)
+            .ToListAsync(ct);
 
-    var completos = grupos
-        .Where(g => g.Materia != null &&
-                    g.Materia.Nivel != null &&
-                    g.Docente != null &&
-                    g.Periodo != null &&
-                    g.Horario != null &&
-                    g.Aula != null)
-        .Select(ToResponseDTO)
-        .ToList();
+        var completos = grupos
+            .Where(g => g.Materia != null &&
+                        g.Materia.Nivel != null &&
+                        g.Docente != null &&
+                        g.Periodo != null &&
+                        g.Horario != null &&
+                        g.Aula != null)
+            .Select(ToResponseDTO)
+            .ToList();
 
-    return Ok(completos);
-}
+        return Ok(completos);
+    }
     [HttpGet("{id:int}")]
-public async Task<ActionResult<GrupoMateriaResponseDto>> GetById(int id, CancellationToken ct)
-{
-    var g = await _context.GruposMaterias
-        .AsNoTracking()
-        .Include(x => x.Materia)
-            .ThenInclude(m => m.Nivel)
-        .Include(x => x.Docente)
-        .Include(x => x.Periodo)
-        .Include(x => x.Horario)
-        .Include(x => x.Aula)
-        .FirstOrDefaultAsync(x => x.Id == id, ct);
+    public async Task<ActionResult<GrupoMateriaResponseDto>> GetById(int id, CancellationToken ct)
+    {
+        var g = await _context.GruposMaterias
+            .AsNoTracking()
+            .Include(x => x.Materia)
+                .ThenInclude(m => m.Nivel)
+            .Include(x => x.Docente)
+            .Include(x => x.Periodo)
+            .Include(x => x.Horario)
+            .Include(x => x.Aula)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
 
-    if (g is null)
-        return NotFound();
+        if (g is null)
+            return NotFound();
 
-    // Validación defensiva para evitar NullReferenceException
-    if (g.Materia is null || g.Materia.Nivel is null || g.Docente is null || g.Periodo is null || g.Horario is null || g.Aula is null)
-        return BadRequest($"GrupoMateria con ID {id} tiene relaciones incompletas.");
+        // Validación defensiva para evitar NullReferenceException
+        if (g.Materia is null || g.Materia.Nivel is null || g.Docente is null || g.Periodo is null || g.Horario is null || g.Aula is null)
+            return BadRequest($"GrupoMateria con ID {id} tiene relaciones incompletas.");
 
-    return Ok(ToResponseDTO(g));
-}
+        return Ok(ToResponseDTO(g));
+    }
     [HttpPost]
     public async Task<ActionResult<GrupoMateriaRequestDto>> Create([FromBody] GrupoMateriaRequestDto dto, CancellationToken ct)
     {
@@ -152,28 +152,28 @@ public async Task<ActionResult<GrupoMateriaResponseDto>> GetById(int id, Cancell
 
 
     //PARA LECTURA DE OBJETOS DENTRO DE INSCRIPCION
-   private static GrupoMateriaResponseDto ToResponseDTO(GrupoMateria m) => new()
-     {
+    private static GrupoMateriaResponseDto ToResponseDTO(GrupoMateria m) => new()
+    {
         Id = m.Id,
         Grupo = m.Grupo,
         Cupo = m.Cupo,
         Estado = m.Estado,
         Materia = new MateriaResponseDto
         {
-         Id = m.Materia.Id,
-         Codigo = m.Materia.Codigo,
-         Nombre = m.Materia.Nombre,
-         Creditos = m.Materia.Creditos,
-             Nivel = new NivelDto
-             {
-              Id = m.Materia.Nivel.Id,
-              Numero = m.Materia.Nivel.Numero,
-              Nombre = m.Materia.Nivel.Nombre
-             }
-       },
+            Id = m.Materia.Id,
+            Codigo = m.Materia.Codigo,
+            Nombre = m.Materia.Nombre,
+            Creditos = m.Materia.Creditos,
+            Nivel = new NivelDto
+            {
+                Id = m.Materia.Nivel!.Id,
+                Numero = m.Materia.Nivel.Numero,
+                Nombre = m.Materia.Nivel.Nombre
+            }
+        },
         Docente = new DocenteDto
         {
-            Id = m.Docente.Id,
+            Id = m.Docente!.Id,
             Registro = m.Docente.Registro,
             Ci = m.Docente.Ci,
             Nombre = m.Docente.Nombre,
@@ -194,11 +194,11 @@ public async Task<ActionResult<GrupoMateriaResponseDto>> GetById(int id, Cancell
             HoraFin = m.Horario.HoraFin
         },
         Aula = new AulaDto
-        { 
+        {
             Id = m.Aula.Id,
             Codigo = m.Aula.Codigo,
             Capacidad = m.Aula.Capacidad,
             Ubicacion = m.Aula.Ubicacion
         }
-     };  
+    };
 }

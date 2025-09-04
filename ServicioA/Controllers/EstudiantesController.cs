@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos.request;
@@ -11,6 +12,7 @@ using TAREATOPICOS.ServicioA.Dtos;
 
 using TAREATOPICOS.ServicioA.Dtos.response;
 using Microsoft.AspNetCore.Authorization;
+using TAREATOPICOS.ServicioA.Services;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
@@ -21,16 +23,20 @@ public class EstudiantesController : ControllerBase
 {
     private readonly ServicioAContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly RedisTransaccionStore _store;
 
-    public EstudiantesController(ServicioAContext context, IConfiguration configuration)
+    public EstudiantesController(ServicioAContext context, IConfiguration configuration, IBackgroundTaskQueue queue, RedisTransaccionStore store)
     {
         _context = context;
         _configuration = configuration;
+        _queue = queue;
+        _store = store;
     }
 
     // --------- CRUD ------------------
     [HttpGet]
-   public async Task<ActionResult<IEnumerable<EstudianteResponseDto>>> GetAll(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<EstudianteResponseDto>>> GetAll(CancellationToken ct)
     {
         var list = await _context.Estudiantes
             .AsNoTracking()
@@ -69,6 +75,23 @@ public class EstudiantesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = e.Id }, ToDTO(e));
     }
 
+    // POST asincrónico: api/estudiantes/async
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] EstudianteRequestDto dto)
+    {
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "POST",
+            Entidad = "Estudiante",
+            Payload = JsonSerializer.Serialize(dto)
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
+    }
+
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] EstudianteRequestDto dto, CancellationToken ct)
     {
@@ -93,6 +116,24 @@ public class EstudiantesController : ControllerBase
         return NoContent();
     }
 
+    // PUT asincrónico: api/estudiantes/async/{id}
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] EstudianteRequestDto dto)
+    {
+        dto.Id = id;
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "PUT",
+            Entidad = "Estudiante",
+            Payload = JsonSerializer.Serialize(dto)
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
@@ -103,42 +144,62 @@ public class EstudiantesController : ControllerBase
         return NoContent();
     }
 
+    // DELETE asincrónico: api/estudiantes/async/{id}
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id)
+    {
+        var transaccion = new Transaccion
+        {
+            TipoOperacion = "DELETE",
+            Entidad = "Estudiante",
+            Payload = JsonSerializer.Serialize(new { Id = id })
+        };
+
+        await _store.AddAsync(transaccion);
+        _queue.Enqueue(transaccion);
+
+        return AcceptedAtAction("GetEstado", "Transacciones", new { id = transaccion.Id }, new { id = transaccion.Id, estado = transaccion.Estado });
+    }
+
     // ========== LOGIN ==========
     [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginDto login)
+    public IActionResult Login([FromBody] LoginDto login)
+    {
+        var estudiante = _context.Estudiantes
+            .FirstOrDefault(e => e.Registro == login.Registro);
+
+        if (estudiante == null || !BCrypt.Net.BCrypt.Verify(login.Password, estudiante.PasswordHash))
         {
-            var estudiante = _context.Estudiantes
-                .FirstOrDefault(e => e.Registro == login.Registro);
+            return Unauthorized("Registro o contraseña inválidos ❌");
+        }
 
-            if (estudiante == null || !BCrypt.Net.BCrypt.Verify(login.Password, estudiante.PasswordHash))
+        var jwtKey = _configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException("La clave JWT no está configurada.");
+
+        var key = Encoding.UTF8.GetBytes(jwtKey);
+        var tokenHandler = new JwtSecurityTokenHandler();
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
             {
-                return Unauthorized("Registro o contraseña inválidos ❌");
-            }
-
-            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
-            var tokenHandler = new JwtSecurityTokenHandler();
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
                     new Claim("Registro", estudiante.Registro),
                     new Claim("Nombre", estudiante.Nombre)
                 }),
-                Expires = DateTime.UtcNow.AddHours(2),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature
-                ),
-                Issuer = _configuration["Jwt:Issuer"],
-                Audience = _configuration["Jwt:Audience"]
-            };
+            Expires = DateTime.UtcNow.AddHours(2),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature
+            ),
+            Issuer = _configuration["Jwt:Issuer"],
+            Audience = _configuration["Jwt:Audience"]
+        };
 
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var jwt = tokenHandler.WriteToken(token);
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var jwt = tokenHandler.WriteToken(token);
 
-            return Ok(new { token = jwt });
-        }
+        return Ok(new { token = jwt });
+    }
 
 
     // ====== Mapper ======
