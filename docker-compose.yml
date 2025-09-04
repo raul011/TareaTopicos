@@ -15,6 +15,13 @@ services:
       - ./ServicioA/db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - pgdata:/var/lib/postgresql/data
 
+  redis:
+    image: redis:alpine
+    container_name: redis_cache
+    restart: always
+    ports:
+      - "6379:6379"
+
   servicioa:
     build: ./ServicioA
     container_name: servicioa
