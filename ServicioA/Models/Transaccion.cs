@@ -1,18 +1,16 @@
-// namespace TAREATOPICOS.ServicioA.Models;
 
-// public class Transaccion
-// {
-//     public string Id { get; set; } = Guid.NewGuid().ToString();
-//     public string Estado { get; set; } = "EN_COLA"; // EN_COLA, PROCESANDO, COMPLETADO, ERROR
-//     public string Tipo { get; set; } = string.Empty; // ej: "CrearNivel"
-//     public object? Payload { get; set; } // los datos que vienen (ej: Nivel)
-// }
 public class Transaccion
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string TipoOperacion { get; set; } = ""; // "POST", "PUT", "DELETE", "GET"
-    public string Entidad { get; set; } = "";       // "Nivel", "Materia", etc.
-    public string? Payload { get; set; }            // Datos serializados en JSON
+    public string TipoOperacion { get; set; } = "";  
+    public string Entidad { get; set; } = "";        
+    public string? Payload { get; set; }            
     public string Estado { get; set; } = "EN_COLA";
+    
+    public int Attempt { get; set; } = 0;
+    public int Priority { get; set; } = 1;             // 0 alta, 1 normal, 2 baja
+    public int MaxRetries { get; set; } = 3;
+    public DateTimeOffset NotBefore { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 // registramos todas las transacciones

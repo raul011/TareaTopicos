@@ -9,75 +9,78 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 [Route("api/[controller]")]
 public class NivelesController : ControllerBase
 {
-    private readonly IBackgroundTaskQueue _queue; //encola la transaccion
-    private readonly TransaccionStore _store; // almacena las transacciones
+    private readonly IBackgroundTaskQueue _queue; // encola la transacción en redis
+    private readonly ITransaccionStore _store;    // guarda/lee estado de la tarea
 
-    public NivelesController(IBackgroundTaskQueue queue, TransaccionStore store)
+    public NivelesController(IBackgroundTaskQueue queue, ITransaccionStore store)
     {
         _queue = queue;
         _store = store;
     }
 
-    // post crearmos un nivel
+    //  /api/niveles/async  
     [HttpPost("async")]
-    public IActionResult CrearNivelAsync([FromBody] Nivel nivel)
+    public async Task<IActionResult> CrearNivelAsync([FromBody] Nivel nivel, CancellationToken ct)
     {
+        //empaqietamos
         var transaccion = new Transaccion
         {
             TipoOperacion = "POST",
             Entidad = "Nivel",
-            Payload = JsonSerializer.Serialize(nivel)
+            Payload = JsonSerializer.Serialize(nivel), //serializamos
+            Estado = "EN_COLA"
         };
 
-        _store.Add(transaccion);
-        _queue.Enqueue(transaccion);
+        await _store.AddAsync(transaccion); //guardamos el estado inicial
+        await _queue.EnqueueAsync(transaccion); //encolamos
 
-       // devuelve el id de la transaccion y el estado inicial
-        return Ok(new { id = transaccion.Id, estado = transaccion.Estado });
+        return Accepted(new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
-    //  
+    //  /api/niveles/async/{id} 
     [HttpPut("async/{id:int}")]
-    public IActionResult ActualizarNivelAsync(int id, [FromBody] Nivel nivel)
+    public async Task<IActionResult> ActualizarNivelAsync(int id, [FromBody] Nivel nivel, CancellationToken ct)
     {
-        nivel.Id = id;  
+        nivel.Id = id;
 
         var transaccion = new Transaccion
         {
             TipoOperacion = "PUT",
             Entidad = "Nivel",
-            Payload = JsonSerializer.Serialize(nivel)
+            Payload = JsonSerializer.Serialize(nivel),
+            Estado = "EN_COLA"
         };
 
-        _store.Add(transaccion);
-        _queue.Enqueue(transaccion);
+        await _store.AddAsync(transaccion);
+        await _queue.EnqueueAsync(transaccion);
 
-        return Ok(new { id = transaccion.Id, estado = transaccion.Estado });
+        return Accepted(new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
-    // DELETE 
+    //api/niveles/async/{id}  
     [HttpDelete("async/{id:int}")]
-    public IActionResult EliminarNivelAsync(int id)
+    public async Task<IActionResult> EliminarNivelAsync(int id, CancellationToken ct)
     {
         var transaccion = new Transaccion
         {
             TipoOperacion = "DELETE",
             Entidad = "Nivel",
-            Payload = JsonSerializer.Serialize(new { Id = id })
+            Payload = JsonSerializer.Serialize(new { Id = id }),
+            Estado = "EN_COLA"
         };
 
-        _store.Add(transaccion);
-        _queue.Enqueue(transaccion);
+        await _store.AddAsync(transaccion);
+        await _queue.EnqueueAsync(transaccion);
 
-        return Ok(new { id = transaccion.Id, estado = transaccion.Estado });
+        return Accepted(new { id = transaccion.Id, estado = transaccion.Estado });
     }
 
-     
+    //api/niveles/estado/{id} 
     [HttpGet("estado/{id:guid}")]
-    public IActionResult GetEstado(Guid id)
+    public async Task<IActionResult> GetEstado(Guid id, CancellationToken ct)
     {
-        var transaccion = _store.Get(id);
-        if (transaccion == null)
+        var transaccion = await _store.GetAsync(id);
+        if (transaccion is null)
             return NotFound(new { mensaje = "Transacción no encontrada" });
 
         return Ok(new { id = transaccion.Id, estado = transaccion.Estado });

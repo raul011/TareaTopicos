@@ -9,13 +9,44 @@ http://localhost:5112/api/estudiantes/login
 
 services/IBackgroundTaskQueue.cs
 R. define que metodo debe implementar en la cola
-Services/BackgroundTaskQueue.cs
-R. implementa la cola en memoria para alamacenar las transacciones aqui se acumulan las transacciones
-Services/TransaccionStore.cs
-R. guarda en memoria el estado de cada transaccion y puede conultar el estado por el id
 Services/Worker.cs
 R. servicio en segundo plano 
 saca una transaccion de la cola lo cambia de estado lo deserializa para obtener el obtener
 el objeto original
 ejecuta la logica en la BD 
 y marca la transaccion como completado o error
+
+RedisTaskQueue.cs
+r. rl que mete las transacciones en redis
+ITransaccionStore.cs
+r. guarda y consulta el estado de cada transaccion
+
+
+
+====================== redis========================
+Paso 1: Entrar a Redis dentro del contenedor Docker
+docker exec -it redis_db redis-cli
+
+
+Eso te abre la consola de Redis (prompt 127.0.0.1:6379>).
+
+Paso 2: Confirmar que la clave existe
+KEYS tx:*
+
+Esto te listará todas las transacciones que tenés guardadas, algo como:
+
+1) "tx:1972b5fe-03e9-4ade-81a9-025ae16dfd79"
+2) "tx:5761c4b1-5495-4021-96c9-5dd101a3ed3f"
+...
+
+Paso 3: Ver la transacción específica
+HGETALL tx:1972b5fe-03e9-4ade-81a9-025ae16dfd79
+
+
+
+
+/Services/Queues/
+   ├── QueueContracts.cs    ← aquí van tus interfaces y records
+   ├── QueueManager.cs      ← implementación del IQueueManager
+   ├── RedisTaskQueue.cs    ← implementación del IPrioritizedTaskQueue
+   └── QueueProcessor.cs    ← implementación de IQueueProcessor (ejemplo por entidad)

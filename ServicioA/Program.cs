@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using System.Text.Json.Serialization;
-using TAREATOPICOS.ServicioA.Services;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+
+using TAREATOPICOS.ServicioA.Services;
+using StackExchange.Redis; 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,14 +80,24 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
-builder.Services.AddSingleton<TransaccionStore>();
+// builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+// builder.Services.AddSingleton<TransaccionStore>();
+// builder.Services.AddHostedService<Worker>();
+
+
+//Conectar Redis desde appsettings
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+    ConnectionMultiplexer.Connect(builder.Configuration["Redis:ConnectionString"]));
+
+//Registrar tu cola basada en Redis (crea RedisTaskQueue que implemente IBackgroundTaskQueue)
+builder.Services.AddSingleton<IBackgroundTaskQueue, RedisTaskQueue>();
+// Antes: in-memory
+// builder.Services.AddSingleton<TransaccionStore>();
+
+// Ahora: Redis
+builder.Services.AddSingleton<ITransaccionStore, RedisTransaccionStore>();
+// Worker
 builder.Services.AddHostedService<Worker>();
-
-
-
-
-
 
 
 var app = builder.Build();
