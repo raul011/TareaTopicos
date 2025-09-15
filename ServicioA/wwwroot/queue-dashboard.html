@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <title>ServicioA – Monitor de Colas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #0b1020;
+            --card: #121831;
+            --muted: #8ea0c2;
+            --ok: #3ecf8e;
+            --warn: #f6c343;
+            --bad: #ff6b6b;
+            --acc: #6ea8fe;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            background: linear-gradient(180deg, #0b1020, #0a0e1a);
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 24px auto;
+            padding: 0 16px;
+            color: #e9efff;
+        }
+
+        .h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 8px 0 16px;
+            letter-spacing: .3px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        @media (min-width: 800px) {
+            .row {
+                grid-template-columns: 1.2fr .8fr;
+            }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+        }
+
+        .cfg {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .cfg input,
+        .cfg select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, .1);
+            background: #0e1430;
+            color: #e9efff;
+        }
+
+        .cfg small {
+            color: var(--muted);
+            display: block;
+            margin-top: 4px;
+        }
+
+        .btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        button {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: #0e1430;
+            color: #e9efff;
+            cursor: pointer;
+        }
+
+        button:hover {
+            border-color: rgba(255, 255, 255, .3);
+        }
+
+        .btn-ok {
+            border-color: rgba(62, 207, 142, .5);
+        }
+
+        .btn-warn {
+            border-color: rgba(246, 195, 67, .5);
+        }
+
+        .btn-bad {
+            border-color: rgba(255, 107, 107, .5);
+        }
+
+        .grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .grid th,
+        .grid td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            text-align: left;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .b-ok {
+            background: rgba(62, 207, 142, .15);
+            color: #a7f3d0;
+            border: 1px solid rgba(62, 207, 142, .4);
+        }
+
+        .b-bad {
+            background: rgba(255, 107, 107, .15);
+            color: #fecaca;
+            border: 1px solid rgba(255, 107, 107, .4);
+        }
+
+        .b-warn {
+            background: rgba(246, 195, 67, .15);
+            color: #fde68a;
+            border: 1px solid rgba(246, 195, 67, .4);
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .kpi {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .kpi .k {
+            background: #0e1430;
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+
+        .k .t {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .k .v {
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .footer {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .err {
+            color: #ffb4b4;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="h1">ServicioA · Monitor de Colas</div>
+
+        <div class="card">
+            <div class="cfg">
+                <div>
+                    <div class="muted">Base URL</div>
+                    <input id="baseUrl" value="http://localhost:5001" />
+                    <small>Ej: http://localhost:5001</small>
+                </div>
+                <div>
+                    <div class="muted">Cola</div>
+                    <input id="queueName" value="default" />
+                    <small>Ej: default</small>
+                </div>
+                <div>
+                    <div class="muted">Auto-Refresh</div>
+                    <select id="interval">
+                        <option value="0">Manual</option>
+                        <option value="1000">1s</option>
+                        <option value="2000" selected>2s</option>
+                        <option value="5000">5s</option>
+                        <option value="10000">10s</option>
+                    </select>
+                    <small>Cada cuánto actualizar</small>
+                </div>
+            </div>
+            <div class="btns">
+                <button id="btnRefresh">Actualizar</button>
+                <button id="btnPause" class="btn-warn">Pausar</button>
+                <button id="btnResume" class="btn-ok">Reanudar</button>
+                <button id="btnReclaim" class="btn-warn">Reclamar In-Flight</button>
+                <button id="btnProcess1" class="btn-ok">Procesar 1</button>
+                <button id="btnReplay" class="btn-bad">DLQ Replay (máx):</button>
+                <!-- L -->
+                <button id="btnPeek">Ver Cola</button>
+                <button id="btnInflight">Ver In-Flight</button>
+                <button id="btnDlqList">Ver DLQ</button>
+
+                <!-- L -->
+                <button id="btnDumpDlq">Dump DLQ (Redis)</button>
+
+                <!-- L -->
+                <input id="replayMax" type="number" value="50" min="1"
+                    style="width:90px; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.2); background:#0e1430; color:#e9efff;">
+            </div>
+            <div id="status" class="muted" style="margin-top:8px;">…</div>
+            <div id="error" class="err"></div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+            <div class="card">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div style="font-weight:700;">Estado de la cola</div>
+                    <div id="pausedBadge" class="badge b-ok">Activa</div>
+                </div>
+
+                <div class="kpi">
+                    <div class="k">
+                        <div class="t">Pendientes (depth)</div>
+                        <div id="depthTotal" class="v">0</div>
+                    </div>
+                    <div class="k">
+                        <div class="t">En vuelo (inflight)</div>
+                        <div id="inflight" class="v">0</div>
+                    </div>
+                    <div class="k">
+                        <div class="t">DLQ</div>
+                        <div id="dlq" class="v">0</div>
+                    </div>
+                    <div class="k">
+                        <div class="t">DLQ (Redis)</div>
+                        <div id="dlqCountDisplay" class="v">0</div>
+                    </div>
+
+                </div>
+
+                <table class="grid" id="depthTable">
+                    <thead>
+                        <tr>
+                            <th>Prioridad</th>
+                            <th>Pendientes</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div style="font-weight:700;">Acciones rápidas</div>
+                <ul class="muted" style="margin-top:8px; line-height:1.6;">
+                    <li><b>Pausar/Reanudar</b>: congela o habilita el consumo.</li>
+                    <li><b>Reclamar In-Flight</b>: devuelve a la cola mensajes atrapados por timeout.</li>
+                    <li><b>Procesar 1</b>: ejecuta solo un mensaje (útil para debug).</li>
+                    <li><b>DLQ Replay</b>: reinyecta mensajes fallidos desde la cola muerta.</li>
+                </ul>
+                <div class="footer">Última actualización: <span id="lastUpdate">—</span></div>
+            </div>
+
+            <div class="card" style="margin-top:12px;">
+                <div style="font-weight:700;">Exploración (contenido)</div>
+                <table class="grid" id="listTable" style="margin-top:8px">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Resumen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div id="listInfo" class="muted" style="margin-top:6px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const $ = s => document.querySelector(s);
+        const base = () => $('#baseUrl').value.replace(/\/+$/, '');
+        const q = () => encodeURIComponent($('#queueName').value.trim() || 'default');
+
+        let timer = null;
+
+        async function api(path, opts = {}) {
+            const url = `${base()}${path}`;
+            const res = await fetch(url, { ...opts, headers: { 'accept': 'application/json', ...(opts.headers || {}) } });
+            if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+            const ct = res.headers.get('content-type') || '';
+            return ct.includes('application/json') ? res.json() : res.text();
+        }
+
+        function setPausedBadge(paused) {
+            const el = $('#pausedBadge');
+            if (paused) { el.textContent = 'Pausada'; el.className = 'badge b-warn'; }
+            else { el.textContent = 'Activa'; el.className = 'badge b-ok'; }
+        }
+
+        function renderStats(s) {
+            // KPI
+            const depthTotal = (s.depths || []).reduce((a, b) => a + (b.depth || 0), 0);
+            $('#depthTotal').textContent = depthTotal;
+            $('#inflight').textContent = s.inflight ?? 0;
+            $('#dlq').textContent = s.dlq ?? 0;
+            setPausedBadge(!!s.paused);
+
+            // Tabla por prioridad
+            const tb = $('#depthTable tbody');
+            tb.innerHTML = '';
+            (s.depths || []).forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>P${d.priority}</td><td>${d.depth}</td>`;
+                tb.appendChild(tr);
+            });
+
+            // Estado inferior
+            $('#status').textContent = `Cola: ${s.queue} · Prioridades: ${s.priorities}`;
+            $('#lastUpdate').textContent = new Date().toLocaleTimeString();
+            $('#error').textContent = '';
+        }
+
+        async function refresh() {
+            try {
+                const stats = await api(`/admin/queues/${q()}/stats`);
+                renderStats(stats);
+            } catch (e) {
+                $('#error').textContent = `Error al cargar stats: ${e.message}`;
+            }
+        }
+
+        // Botones
+        $('#btnRefresh').onclick = refresh;
+
+        $('#btnPause').onclick = async () => {
+            try { await api(`/admin/queues/${q()}/pause`, { method: 'POST' }); await refresh(); }
+            catch (e) { $('#error').textContent = e.message; }
+        };
+        $('#btnResume').onclick = async () => {
+            try { await api(`/admin/queues/${q()}/resume`, { method: 'POST' }); await refresh(); }
+            catch (e) { $('#error').textContent = e.message; }
+        };
+        $('#btnReclaim').onclick = async () => {
+            try { const r = await api(`/admin/queues/${q()}/reclaim`, { method: 'POST' }); await refresh(); }
+            catch (e) { $('#error').textContent = e.message; }
+        };
+        $('#btnProcess1').onclick = async () => {
+            try { const r = await api(`/admin/queues/${q()}/process-once`, { method: 'POST' }); await refresh(); }
+            catch (e) { $('#error').textContent = e.message; }
+        };
+        $('#btnReplay').onclick = async () => {
+            try {
+                const max = Math.max(1, parseInt($('#replayMax').value || '50', 10));
+                const r = await api(`/admin/queues/${q()}/dlq/replay?max=${max}`, { method: 'POST' });
+                await refresh();
+            } catch (e) { $('#error').textContent = e.message; }
+        };
+
+        // Auto-refresh
+        function setIntervalFromUI() {
+            if (timer) { clearInterval(timer); timer = null; }
+            const ms = parseInt($('#interval').value, 10);
+            if (ms > 0) timer = setInterval(refresh, ms);
+        }
+        $('#interval').onchange = setIntervalFromUI;
+
+        function summarizeRaw(raw) {
+            // Intenta extraer info útil sin romper si cambia el esquema
+            try {
+                const o = JSON.parse(raw);
+                // Common fields que sueles guardar
+                const id = o.id || o.Id || o.tx?.id || o.tx?.Id;
+                const ent = o.entidad || o.Entidad || o.tx?.entidad || o.tx?.Entidad;
+                const tipo = o.tipo || o.Tipo || o.tx?.tipo || o.tx?.Tipo;
+                const att = o.attempt ?? o.Attempt ?? o.tx?.attempt ?? o.tx?.Attempt;
+                const err = o.error || o.Error;
+                const at = o.at || o.At || o.timestamp || o.Timestamp;
+
+                let s = [];
+                if (id) s.push(`id=${id}`);
+                if (ent) s.push(`entidad=${ent}`);
+                if (tipo) s.push(`tipo=${tipo}`);
+                if (typeof att !== 'undefined') s.push(`attempt=${att}`);
+                if (at) s.push(`at=${at}`);
+                if (err) s.push(`error=${(err + '').substring(0, 120)}`);
+                return s.join(' · ') || raw.substring(0, 120);
+            } catch {
+                return raw.substring(0, 160);
+            }
+        }
+        async function loadDlqCount() {
+            try {
+                const r = await api(`/admin/queues/${q()}/dlq/count`);
+                $('#dlqCountDisplay').textContent = r.dlqCount ?? '0';
+            } catch (e) {
+                $('#dlqCountDisplay').textContent = '—';
+            }
+        }
+
+        function renderList(items, label) {
+            const tb = document.querySelector('#listTable tbody');
+            tb.innerHTML = '';
+            items.forEach((it, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${i + 1}</td><td>${summarizeRaw(it.raw)}</td>`;
+                tb.appendChild(tr);
+            });
+            document.getElementById('listInfo').textContent =
+                `${label}: ${items.length} elemento(s) mostrados`;
+        }
+
+        // Botones de exploración
+        document.getElementById('btnPeek').onclick = async () => {
+            try {
+                const r = await api(`/admin/queues/${q()}/peek?max=50`);
+                // Si pediste todas las prioridades, r.buckets = [{priority,items}]
+                let items = [];
+                if (r.buckets) r.buckets.forEach(b => items = items.concat(b.items));
+                else if (r.items) items = r.items;
+                renderList(items, 'Cola principal (pendientes)');
+            } catch (e) { document.getElementById('error').textContent = e.message; }
+        };
+
+        document.getElementById('btnInflight').onclick = async () => {
+            try {
+                const r = await api(`/admin/queues/${q()}/inflight?max=50`);
+                renderList(r.items || [], 'In-Flight');
+            } catch (e) { document.getElementById('error').textContent = e.message; }
+        };
+
+        document.getElementById('btnDlqList').onclick = async () => {
+            try {
+                const r = await api(`/admin/queues/${q()}/dlq/list?max=50`);
+                renderList(r.items || [], 'DLQ');
+            } catch (e) { document.getElementById('error').textContent = e.message; }
+        };
+
+        document.getElementById('btnDumpDlq').onclick = async () => {
+            try {
+                const key = `q:${q()}:dlq`;  // asegúrate de que coincida con tu KeyPrefix
+                const items = await api(`/admin/redis/dump?key=${encodeURIComponent(key)}`);
+                renderList(items.map(i => ({ raw: i })), 'DLQ (crudo)');
+            } catch (e) {
+                document.getElementById('error').textContent = e.message;
+            }
+        };
+
+
+
+        // Primer load
+        refresh().then(setIntervalFromUI);
+    </script>
+</body>
+
+</html>

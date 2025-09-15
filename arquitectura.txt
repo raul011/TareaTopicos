@@ -1,0 +1,63 @@
+ServicioA/
+├─ Controllers/
+│  ├─ AdminController.cs
+│  ├─ HealthController.cs
+│  ├─ NivelesController.cs
+│  ├─ ReadinessController.cs
+│  └─ TransaccionesController.cs
+
+├─ Data/
+│  └─ ServicioAContext.cs
+
+├─ Extensions/
+│  └─ ServiceCollectionExtensions.cs
+
+├─ Models/
+│  ├─ Nivel.cs
+│  ├─ QueueDescriptor.cs
+│  ├─ QueuesConfig.cs
+│  ├─ Transaccion.cs
+│  └─ WorkerDescriptor.cs
+│  └─ ProcessedMessage.cs
+│  └─ ProcessResult.cs
+
+├─ Contracts/
+│  ├─ CallbackEvent.cs
+
+├─ Options/
+│  ├─ QueueOptions.cs
+│  └─ RedisOptions.cs
+
+├─ Services/
+│  ├─ Processors/
+│  │  ├─ DefaultProcessor.cs
+│  │  ├─ IProcessor.cs
+│  │  ├─ IQueueProcessor.cs
+│  │  └─ NivelProcessor.cs
+│  ├─ seeders/
+│  │  └─ ISeeder.cs
+│  │  
+│  ├─ ConfigWatcher.cs
+CallbackService.cs
+QueueStateService.cs
+│  ├─ DeadLetterService.cs
+│  ├─ IBackgroundTaskQueue.cs
+│  ├─ IIdempotencyGuard.cs
+│  ├─ IdempotencyGuard.cs
+│  ├─ ITransaccionStore.cs
+│  ├─ QueueManager.cs
+│  ├─ RateLimiter.cs
+│  ├─ RedisScaleBackplane.cs
+│  ├─ RedisTaskQueue.cs
+│  ├─ RedisTransaccionStore.cs
+│  ├─ VisibilityReclaimer.cs
+│  ├─ WorkerHost.cs
+│  ├─ WorkerPool.cs
+│  └─ WorkerService.cs
+│ 
+├─ appsettings.json
+├─ Dockerfile
+├─ Program.cs
+
+raiz
+└─docker-compose.yml
