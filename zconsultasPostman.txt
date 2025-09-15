@@ -80,10 +80,4 @@ docker compose logs -f servicioa
 
 
 
-add N | + N        -> agrega N workers
-  remove N | - N     -> quita N workers
-  set N | = N        -> fija exactamente N workers       
-  status             -> muestra conteo de workers        
-  stats              -> muestra estadísticas de endpoints
-  stop               -> detiene todos los workers        
-  quit | q           -> salir
+ 

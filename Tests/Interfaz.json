@@ -1,0 +1,21 @@
+[
+  {
+    "url": "/api/niveles/async",
+    "method": "POST",
+    "body": {
+      "numero": 9,
+      "nombre": "9no Semestre"
+    }
+  },
+  {
+    "url": "/api/niveles/async/numero/9",
+    "method": "PUT",
+    "body": {
+      "nombre": "5to Semestre (Actualizado)"
+    }
+  },
+  {
+    "url": "/api/niveles/async/numero/10",
+    "method": "DELETE"
+  } 
+]
