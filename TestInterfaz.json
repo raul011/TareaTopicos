@@ -1,0 +1,30 @@
+[
+  {
+    "url": "/api/inscripciones/async",
+    "method": "POST",
+    "body": {
+      "registro": "20251234",
+      "gestion": "2025-1"
+    }
+  },
+  {
+    "url": "/api/inscripciones/1/detalles/async",
+    "method": "POST",
+    "body": {
+      "materiaCodigo": "MAT101",
+      "grupo": "A"
+    }
+  },
+  {
+    "url": "/api/inscripciones/1/detalles/por-materia/async",
+    "method": "DELETE",
+    "body": {
+      "materiaCodigo": "MAT101",
+      "grupo": "A"
+    }
+  },
+  {
+    "url": "/api/inscripciones/1/finalizar/async",
+    "method": "POST"
+  }
+]

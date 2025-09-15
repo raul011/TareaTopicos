@@ -8,7 +8,7 @@ using TAREATOPICOS.ServicioA.Dtos.response;
 
 using Microsoft.AspNetCore.Authorization;
 
-namespace TAREATOPICOS.ServicioA.Controllers;
+namespace TAREATOPICOS.ServicioA.Controllers.Sincrono;
 
 [ApiController]
 [Route("api/[controller]")]

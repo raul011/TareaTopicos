@@ -12,7 +12,7 @@ namespace TAREATOPICOS.ServicioA.Controllers.Asincrono;
 
 [ApiController]
 [Route("api/[controller]")]
-public class InscripcionesAsyncController : ControllerBase
+public class InscripcionesController : ControllerBase
 {
     private readonly IBackgroundTaskQueue _queue; // encola la transacción (Redis)
     private readonly ITransaccionStore _store;    // guarda/lee estado (Redis)
@@ -30,6 +30,12 @@ public class InscripcionesAsyncController : ControllerBase
     [HttpPost("async")]
     public async Task<IActionResult> CrearInscripcionAsync([FromBody] CrearInscripcionAsyncDto dto, CancellationToken ct)
     {
+        // Validación previa: ¿Existen el estudiante y el período?
+        var estudiante = await _db.Estudiantes.AsNoTracking().FirstOrDefaultAsync(e => e.Registro == dto.Registro, ct);
+        if (estudiante is null) return BadRequest(new { mensaje = "El registro del estudiante no existe." });
+        var periodo = await _db.PeriodosAcademicos.AsNoTracking().FirstOrDefaultAsync(p => p.Gestion == dto.Gestion, ct);
+        if (periodo is null) return BadRequest(new { mensaje = "La gestión del período no existe." });
+
         var tx = new Transaccion
         {
             Entidad = "Inscripcion",
@@ -47,9 +53,16 @@ public class InscripcionesAsyncController : ControllerBase
     // 2) Agregar detalle (ASÍNCRONO)
     // POST /api/inscripciones/{id}/detalles/async
     [HttpPost("{id:int}/detalles/async")]
-    public async Task<IActionResult> AgregarDetalleAsync(int id, [FromBody] AgregarDetalleAsyncDto dto, CancellationToken ct)
+    public async Task<IActionResult> AgregarDetalleAsync(int id, [FromBody] AgregarDetalleRequestDto dto, CancellationToken ct)
     {
-        if (dto.InscripcionId != id) return BadRequest("El Id de la inscripción no coincide.");
+        // Validación previa
+        var inscripcion = await _db.Inscripciones.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (inscripcion is null) return NotFound(new { mensaje = "Inscripción no encontrada." });
+
+        var grupoMateria = await _db.GruposMaterias.AsNoTracking()
+            .Include(gm => gm.Materia)
+            .FirstOrDefaultAsync(gm => gm.Materia.Codigo == dto.MateriaCodigo && gm.Grupo == dto.Grupo && gm.PeriodoId == inscripcion.PeriodoId, ct);
+        if (grupoMateria is null) return BadRequest(new { mensaje = "El grupo para la materia especificada no existe en el período de la inscripción." });
 
         var tx = new Transaccion
         {
@@ -68,9 +81,16 @@ public class InscripcionesAsyncController : ControllerBase
     // 3a) Quitar detalle por DetalleId (ASÍNCRONO)
     // DELETE /api/inscripciones/{id}/detalles/{detalleId}/async
     [HttpDelete("{id:int}/detalles/{detalleId:int}/async")]
-    public async Task<IActionResult> QuitarDetallePorIdAsync(int id, int detalleId, CancellationToken ct)
+    public async Task<IActionResult> QuitarDetalleAsync(int id, int detalleId, CancellationToken ct)
     {
-        var dto = new QuitarDetallePorIdAsyncDto { InscripcionId = id, DetalleId = detalleId };
+        // Validación previa
+        var detalle = await _db.DetallesInscripciones.AsNoTracking().FirstOrDefaultAsync(d => d.Id == detalleId && d.InscripcionId == id, ct);
+        if (detalle is null) return NotFound(new { mensaje = "El detalle de inscripción no existe o no pertenece a la inscripción indicada." });
+
+        var dto = new QuitarDetalleAsyncDto
+        {
+            DetalleId = detalleId
+        };
 
         var tx = new Transaccion
         {
@@ -86,17 +106,23 @@ public class InscripcionesAsyncController : ControllerBase
         return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
-    // 3b) Quitar por GrupoMateriaId (ASÍNCRONO)
-    // DELETE /api/inscripciones/{id}/detalles/async
-    [HttpDelete("{id:int}/detalles/async")]
-    public async Task<IActionResult> QuitarDetallePorGrupoAsync(int id, [FromBody] QuitarDetallePorGrupoAsyncDto dto, CancellationToken ct)
+    // 3b) Quitar por Código de Materia y Grupo (ASÍNCRONO)
+    // DELETE /api/inscripciones/{id}/detalles/por-materia/async
+    [HttpDelete("{id:int}/detalles/por-materia/async")]
+    public async Task<IActionResult> QuitarDetallePorMateriaAsync(int id, [FromBody] QuitarDetallePorMateriaRequestDto dto, CancellationToken ct)
     {
-        if (dto.InscripcionId != id) return BadRequest("El Id de la inscripción no coincide.");
+        // Validación previa
+        var detalle = await _db.DetallesInscripciones.AsNoTracking()
+            .Include(d => d.GrupoMateria.Materia)
+            .FirstOrDefaultAsync(d => d.InscripcionId == id &&
+                                      d.GrupoMateria.Materia.Codigo == dto.MateriaCodigo &&
+                                      d.GrupoMateria.Grupo == dto.Grupo, ct);
+        if (detalle is null) return NotFound(new { mensaje = "No se encontró un detalle con esa materia y grupo en la inscripción." });
 
         var tx = new Transaccion
         {
             Entidad = "Inscripcion",
-            TipoOperacion = "QuitarDetallePorGrupo",
+            TipoOperacion = "QuitarDetalle",
             Payload = JsonSerializer.Serialize(dto),
             Estado = "EN_COLA"
         };
@@ -112,7 +138,11 @@ public class InscripcionesAsyncController : ControllerBase
     [HttpPost("{id:int}/finalizar/async")]
     public async Task<IActionResult> FinalizarInscripcionAsync(int id, CancellationToken ct)
     {
-        var dto = new FinalizarInscripcionAsyncDto { InscripcionId = id };
+        // Validación previa
+        var inscripcion = await _db.Inscripciones.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (inscripcion is null) return NotFound(new { mensaje = "Inscripción no encontrada." });
+
+        var dto = new { InscripcionId = id };
 
         var tx = new Transaccion
         {
