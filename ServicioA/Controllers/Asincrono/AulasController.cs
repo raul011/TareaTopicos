@@ -1,19 +1,29 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers.Sincrono;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-public class AulasController : ControllerBase
+// [Authorize]
+public class AulasAsyncController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public AulasController(ServicioAContext context) => _context = context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
+
+    public AulasAsyncController(ServicioAContext context, IBackgroundTaskQueue queue, ITransaccionStore store)
+    {
+        _context = context;
+        _queue = queue;
+        _store = store;
+    }
 
     // GET api/aulas
     [HttpGet]
@@ -39,47 +49,78 @@ public class AulasController : ControllerBase
     }
 
     // POST api/aulas
-    [HttpPost]
-    public async Task<ActionResult<AulaDto>> Create([FromBody] AulaDto dto, CancellationToken ct = default)
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] AulaDto dto, CancellationToken ct = default)
     {
-        var entity = new Aula
+        if (await _context.Aulas.AnyAsync(a => a.Codigo == dto.Codigo, ct))
+            return Conflict(new { mensaje = $"El código de aula '{dto.Codigo}' ya existe." });
+
+        var tx = new Transaccion
         {
-            Codigo = dto.Codigo,
-            Capacidad = dto.Capacidad,
-            Ubicacion = dto.Ubicacion
+            Entidad = "Aula",
+            TipoOperacion = "CrearAula",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
         };
 
-        _context.Aulas.Add(entity);
-        await _context.SaveChangesAsync(ct);
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDTO(entity));
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
     // PUT api/aulas/{id}
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] AulaDto dto, CancellationToken ct = default)
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] AulaDto dto, CancellationToken ct = default)
     {
-        var aula = await _context.Aulas.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (aula is null) return NotFound();
+        if (!await _context.Aulas.AnyAsync(a => a.Id == id, ct))
+            return NotFound(new { mensaje = "El aula no existe." });
 
-        aula.Codigo = dto.Codigo;
-        aula.Capacidad = dto.Capacidad;
-        aula.Ubicacion = dto.Ubicacion;
+        dto.Id = id; // Aseguramos que el ID esté en el payload
 
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        var tx = new Transaccion
+        {
+            Entidad = "Aula",
+            TipoOperacion = "ActualizarAula",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
     // DELETE api/aulas/{id}
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var aula = await _context.Aulas.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (aula is null) return NotFound();
+        if (!await _context.Aulas.AnyAsync(a => a.Id == id, ct))
+            return NotFound(new { mensaje = "El aula no existe." });
 
-        _context.Aulas.Remove(aula);
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        var payload = new { Id = id };
+
+        var tx = new Transaccion
+        {
+            Entidad = "Aula",
+            TipoOperacion = "EliminarAula",
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpGet("estado/{txId:guid}")]
+    public async Task<IActionResult> Estado(Guid txId, CancellationToken ct)
+    {
+        var tx = await _store.GetAsync(txId);
+        if (tx is null) return NotFound(new { mensaje = "Transacción no encontrada" });
+        return Ok(new { id = tx.Id, estado = tx.Estado });
     }
 
     private static AulaDto ToDTO(Aula a) => new()

@@ -12,7 +12,7 @@ namespace TAREATOPICOS.ServicioA.Controllers.Asincrono;
 
 [ApiController]
 [Route("api/[controller]")]
-public class InscripcionesController : ControllerBase
+public class InscripcionesAsyncController : ControllerBase
 {
     private readonly IBackgroundTaskQueue _queue; // encola la transacción (Redis)
     private readonly ITransaccionStore _store;    // guarda/lee estado (Redis)
@@ -51,12 +51,17 @@ public class InscripcionesController : ControllerBase
     }
 
     // 2) Agregar detalle (ASÍNCRONO)
-    // POST /api/inscripciones/{id}/detalles/async
-    [HttpPost("{id:int}/detalles/async")]
-    public async Task<IActionResult> AgregarDetalleAsync(int id, [FromBody] AgregarDetalleRequestDto dto, CancellationToken ct)
+    // POST /api/inscripciones/detalles/async
+    [HttpPost("detalles/async")]
+    public async Task<IActionResult> AgregarDetalleAsync([FromBody] AgregarDetalleAInscripcionRequestDto dto, CancellationToken ct)
     {
+        // Buscamos la inscripción por registro y gestión
+        var inscripcion = await _db.Inscripciones.AsNoTracking()
+            .Include(i => i.Estudiante)
+            .Include(i => i.Periodo)
+            .FirstOrDefaultAsync(i => i.Estudiante.Registro == dto.Registro && i.Periodo.Gestion == dto.Gestion, ct);
+
         // Validación previa
-        var inscripcion = await _db.Inscripciones.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id, ct);
         if (inscripcion is null) return NotFound(new { mensaje = "Inscripción no encontrada." });
 
         var grupoMateria = await _db.GruposMaterias.AsNoTracking()
@@ -64,11 +69,18 @@ public class InscripcionesController : ControllerBase
             .FirstOrDefaultAsync(gm => gm.Materia.Codigo == dto.MateriaCodigo && gm.Grupo == dto.Grupo && gm.PeriodoId == inscripcion.PeriodoId, ct);
         if (grupoMateria is null) return BadRequest(new { mensaje = "El grupo para la materia especificada no existe en el período de la inscripción." });
 
+        var payload = new
+        {
+            InscripcionId = inscripcion.Id, // Internamente usamos el ID
+            dto.MateriaCodigo,
+            dto.Grupo
+        };
+
         var tx = new Transaccion
         {
             Entidad = "Inscripcion",
             TipoOperacion = "AgregarDetalle",
-            Payload = JsonSerializer.Serialize(dto),
+            Payload = JsonSerializer.Serialize(payload),
             Estado = "EN_COLA"
         };
 
@@ -79,12 +91,19 @@ public class InscripcionesController : ControllerBase
     }
 
     // 3a) Quitar detalle por DetalleId (ASÍNCRONO)
-    // DELETE /api/inscripciones/{id}/detalles/{detalleId}/async
-    [HttpDelete("{id:int}/detalles/{detalleId:int}/async")]
-    public async Task<IActionResult> QuitarDetalleAsync(int id, int detalleId, CancellationToken ct)
+    // DELETE /api/inscripciones/detalles/async
+    [HttpDelete("detalles/async")]
+    public async Task<IActionResult> QuitarDetalleAsync([FromBody] QuitarDetalleDeInscripcionRequestDto dto, CancellationToken ct)
     {
+        var inscripcion = await _db.Inscripciones.AsNoTracking()
+            .Include(i => i.Estudiante)
+            .Include(i => i.Periodo)
+            .FirstOrDefaultAsync(i => i.Estudiante.Registro == dto.Registro && i.Periodo.Gestion == dto.Gestion, ct);
+
+        if (inscripcion is null) return NotFound(new { mensaje = "Inscripción no encontrada." });
+
         // Validación previa
-        var detalle = await _db.DetallesInscripciones.AsNoTracking().FirstOrDefaultAsync(d => d.Id == detalleId && d.InscripcionId == id, ct);
+        var detalle = await _db.DetallesInscripciones.AsNoTracking().FirstOrDefaultAsync(d => d.Id == dto.DetalleId && d.InscripcionId == inscripcion.Id, ct);
         if (detalle is null) return NotFound(new { mensaje = "El detalle de inscripción no existe o no pertenece a la inscripción indicada." });
 
         var dto = new QuitarDetalleAsyncDto
@@ -107,14 +126,21 @@ public class InscripcionesController : ControllerBase
     }
 
     // 3b) Quitar por Código de Materia y Grupo (ASÍNCRONO)
-    // DELETE /api/inscripciones/{id}/detalles/por-materia/async
-    [HttpDelete("{id:int}/detalles/por-materia/async")]
-    public async Task<IActionResult> QuitarDetallePorMateriaAsync(int id, [FromBody] QuitarDetallePorMateriaRequestDto dto, CancellationToken ct)
+    // DELETE /api/inscripciones/detalles/por-materia/async
+    [HttpDelete("detalles/por-materia/async")]
+    public async Task<IActionResult> QuitarDetallePorMateriaAsync([FromBody] QuitarDetallePorMateriaDeInscripcionRequestDto dto, CancellationToken ct)
     {
+        var inscripcion = await _db.Inscripciones.AsNoTracking()
+            .Include(i => i.Estudiante)
+            .Include(i => i.Periodo)
+            .FirstOrDefaultAsync(i => i.Estudiante.Registro == dto.Registro && i.Periodo.Gestion == dto.Gestion, ct);
+
+        if (inscripcion is null) return NotFound(new { mensaje = "Inscripción no encontrada." });
+
         // Validación previa
         var detalle = await _db.DetallesInscripciones.AsNoTracking()
             .Include(d => d.GrupoMateria.Materia)
-            .FirstOrDefaultAsync(d => d.InscripcionId == id &&
+            .FirstOrDefaultAsync(d => d.InscripcionId == inscripcion.Id &&
                                       d.GrupoMateria.Materia.Codigo == dto.MateriaCodigo &&
                                       d.GrupoMateria.Grupo == dto.Grupo, ct);
         if (detalle is null) return NotFound(new { mensaje = "No se encontró un detalle con esa materia y grupo en la inscripción." });
@@ -122,7 +148,7 @@ public class InscripcionesController : ControllerBase
         var tx = new Transaccion
         {
             Entidad = "Inscripcion",
-            TipoOperacion = "QuitarDetalle",
+            TipoOperacion = "QuitarDetallePorMateria",
             Payload = JsonSerializer.Serialize(dto),
             Estado = "EN_COLA"
         };
@@ -134,21 +160,26 @@ public class InscripcionesController : ControllerBase
     }
 
     // 4) Finalizar inscripción (ASÍNCRONO)
-    // POST /api/inscripciones/{id}/finalizar/async
-    [HttpPost("{id:int}/finalizar/async")]
-    public async Task<IActionResult> FinalizarInscripcionAsync(int id, CancellationToken ct)
+    // POST /api/inscripciones/finalizar/async
+    [HttpPost("finalizar/async")]
+    public async Task<IActionResult> FinalizarInscripcionAsync([FromBody] FinalizarInscripcionRequestDto dto, CancellationToken ct)
     {
+        var inscripcion = await _db.Inscripciones.AsNoTracking()
+            .Include(i => i.Estudiante)
+            .Include(i => i.Periodo)
+            .FirstOrDefaultAsync(i => i.Estudiante.Registro == dto.Registro && i.Periodo.Gestion == dto.Gestion, ct);
+
         // Validación previa
-        var inscripcion = await _db.Inscripciones.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id, ct);
         if (inscripcion is null) return NotFound(new { mensaje = "Inscripción no encontrada." });
 
-        var dto = new { InscripcionId = id };
+        // El payload para el worker sí llevará el ID
+        var payload = new { InscripcionId = inscripcion.Id };
 
         var tx = new Transaccion
         {
             Entidad = "Inscripcion",
             TipoOperacion = "FinalizarInscripcion",
-            Payload = JsonSerializer.Serialize(dto),
+            Payload = JsonSerializer.Serialize(payload),
             Estado = "EN_COLA"
         };
 
@@ -159,7 +190,7 @@ public class InscripcionesController : ControllerBase
     }
 
     // 5) Consultar estado de una transacción (ASÍNCRONO)
-    // GET /api/inscripciones/estado/{txId}
+    // GET /api/inscripcionesasync/estado/{txId}
     [HttpGet("estado/{txId:guid}")]
     public async Task<IActionResult> Estado(Guid txId, CancellationToken ct)
     {
@@ -168,14 +199,18 @@ public class InscripcionesController : ControllerBase
         return Ok(new { id = tx.Id, estado = tx.Estado });
     }
 
-    // 6) Oferta (YA era asíncrono con EF Core)
-    // GET /api/inscripciones/{id}/oferta
-    [HttpGet("{id:int}/oferta")]
-    public async Task<ActionResult<IEnumerable<GrupoOfertaDto>>> GetOferta(int id, CancellationToken ct)
+    // 6) Oferta (Lectura síncrona)
+    // GET /api/inscripciones/oferta
+    [HttpGet("oferta")]
+    public async Task<ActionResult<IEnumerable<GrupoOfertaDto>>> GetOferta([FromQuery] string registro, [FromQuery] string gestion, CancellationToken ct)
     {
         var insc = await _db.Inscripciones
             .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.Id == id, ct);
+            .Include(i => i.Estudiante)
+            .Include(i => i.Periodo)
+            .FirstOrDefaultAsync(i =>
+                i.Estudiante.Registro == registro &&
+                i.Periodo.Gestion == gestion, ct);
 
         if (insc is null) return NotFound("Inscripción no existe.");
 
@@ -191,12 +226,12 @@ public class InscripcionesController : ControllerBase
         var result = grupos.Select(g => new GrupoOfertaDto
         {
             GrupoMateriaId = g.Id,
-            MateriaCodigo  = g.Materia.Codigo,
-            MateriaNombre  = g.Materia.Nombre,
-            Grupo          = g.Grupo,
-            Cupo           = g.Cupo,
-            Docente        = g.Docente?.Nombre ?? "",
-            Aula           = g.Aula?.Codigo ?? "",
+            MateriaCodigo = g.Materia.Codigo,
+            MateriaNombre = g.Materia.Nombre,
+            Grupo = g.Grupo,
+            Cupo = g.Cupo,
+            Docente = g.Docente?.Nombre ?? "",
+            Aula = g.Aula?.Codigo ?? "",
             Horarios = g.Horario is null
                 ? new List<HorarioOfertaDto>()
                 : new List<HorarioOfertaDto> {

@@ -1,21 +1,31 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers.Sincrono;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-public class PlanesDeEstudioController : ControllerBase
+// [Authorize]
+public class PlanesDeEstudioAsyncController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public PlanesDeEstudioController(ServicioAContext context) => _context = context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
 
+    public PlanesDeEstudioAsyncController(ServicioAContext context, IBackgroundTaskQueue queue, ITransaccionStore store)
+    {
+        _context = context;
+        _queue = queue;
+        _store = store;
+    }
+    
     // GET api/planesdeestudio
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PlanDeEstudioDto>>> Get(CancellationToken ct = default)
@@ -40,45 +50,53 @@ public class PlanesDeEstudioController : ControllerBase
     }
 
     // POST api/planesdeestudio
-    [HttpPost]
-    public async Task<ActionResult<PlanDeEstudioDto>> Create([FromBody] PlanDeEstudioDto dto, CancellationToken ct = default)
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] PlanDeEstudioDto dto, CancellationToken ct = default)
     {
-        var entity = new PlanDeEstudio
+        if (await _context.PlanesEstudio.AnyAsync(p => p.Codigo == dto.Codigo, ct))
+            return Conflict(new { mensaje = $"El código de plan '{dto.Codigo}' ya existe." });
+
+        var tx = new Transaccion
         {
-            Nombre = dto.Nombre,
-            Codigo = dto.Codigo,
-            Fecha = dto.Fecha,
-            Estado = string.IsNullOrWhiteSpace(dto.Estado) ? "ACTIVO" : dto.Estado,
-            CarreraId = dto.CarreraId
+            Entidad = "PlanDeEstudio",
+            TipoOperacion = "CrearPlan",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
         };
 
-        _context.PlanesEstudio.Add(entity);
-        await _context.SaveChangesAsync(ct);
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDTO(entity));
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
     // PUT api/planesdeestudio/{id}
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] PlanDeEstudioDto dto, CancellationToken ct = default)
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] PlanDeEstudioDto dto, CancellationToken ct = default)
     {
-        var plan = await _context.PlanesEstudio.FirstOrDefaultAsync(p => p.Id == id, ct);
-        if (plan is null) return NotFound();
+        if (!await _context.PlanesEstudio.AnyAsync(p => p.Id == id, ct))
+            return NotFound(new { mensaje = "El plan de estudio no existe." });
 
-        plan.Nombre = dto.Nombre;
-        plan.Codigo = dto.Codigo;
-        plan.Fecha = dto.Fecha;
-        plan.Estado = dto.Estado;
-        plan.CarreraId = dto.CarreraId;
+        dto.Id = id;
 
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        var tx = new Transaccion
+        {
+            Entidad = "PlanDeEstudio",
+            TipoOperacion = "ActualizarPlan",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
     
     // GET api/planesdeestudio/{id}/materias
-[HttpGet("{id:int}/materias")]
-public async Task<ActionResult<IEnumerable<MateriaRequestDto>>> GetMateriasDePlan(int id, CancellationToken ct = default)
-{
+    [HttpGet("{id:int}/materias")]
+    public async Task<ActionResult<IEnumerable<MateriaRequestDto>>> GetMateriasDePlan(int id, CancellationToken ct = default)
+    {
     // 1. Validar existencia del plan
     var existePlan = await _context.PlanesEstudio
         .AsNoTracking()
@@ -108,15 +126,34 @@ public async Task<ActionResult<IEnumerable<MateriaRequestDto>>> GetMateriasDePla
 }
 
     // DELETE api/planesdeestudio/{id}
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var plan = await _context.PlanesEstudio.FirstOrDefaultAsync(p => p.Id == id, ct);
-        if (plan is null) return NotFound();
+        if (!await _context.PlanesEstudio.AnyAsync(p => p.Id == id, ct))
+            return NotFound(new { mensaje = "El plan de estudio no existe." });
 
-        _context.PlanesEstudio.Remove(plan);
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        var payload = new { Id = id };
+
+        var tx = new Transaccion
+        {
+            Entidad = "PlanDeEstudio",
+            TipoOperacion = "EliminarPlan",
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpGet("estado/{txId:guid}")]
+    public async Task<IActionResult> Estado(Guid txId, CancellationToken ct)
+    {
+        var tx = await _store.GetAsync(txId);
+        if (tx is null) return NotFound(new { mensaje = "Transacción no encontrada" });
+        return Ok(new { id = tx.Id, estado = tx.Estado });
     }
 
     private static PlanDeEstudioDto ToDTO(PlanDeEstudio p) => new()

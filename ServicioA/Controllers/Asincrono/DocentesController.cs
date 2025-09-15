@@ -1,22 +1,28 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers.Sincrono;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-public class DocentesController : ControllerBase
+// [Authorize]
+public class DocentesAsyncController : ControllerBase
 {
     private readonly ServicioAContext _context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
 
-    public DocentesController(ServicioAContext context)
+    public DocentesAsyncController(ServicioAContext context, IBackgroundTaskQueue queue, ITransaccionStore store)
     {
         _context = context;
+        _queue = queue;
+        _store = store;
     }
 
     // GET: api/docentes
@@ -43,51 +49,78 @@ public class DocentesController : ControllerBase
     }
 
     // POST: api/docentes
-    [HttpPost]
-    public async Task<ActionResult<DocenteDto>> Create([FromBody] DocenteDto dto, CancellationToken ct = default)
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] DocenteDto dto, CancellationToken ct = default)
     {
-        var entity = new Docente
+        if (await _context.Docentes.AnyAsync(d => d.Registro == dto.Registro, ct))
+            return Conflict(new { mensaje = $"El registro de docente '{dto.Registro}' ya existe." });
+
+        var tx = new Transaccion
         {
-            Registro = dto.Registro,
-            Ci = dto.Ci,
-            Nombre = dto.Nombre,
-            Telefono = dto.Telefono,
-            Estado = string.IsNullOrWhiteSpace(dto.Estado) ? "ACTIVO" : dto.Estado
+            Entidad = "Docente",
+            TipoOperacion = "CrearDocente",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
         };
 
-        _context.Docentes.Add(entity);
-        await _context.SaveChangesAsync(ct);
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
     // PUT: api/docentes/{id}
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] DocenteDto dto, CancellationToken ct = default)
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] DocenteDto dto, CancellationToken ct = default)
     {
-        var docente = await _context.Docentes.FirstOrDefaultAsync(d => d.Id == id, ct);
-        if (docente is null) return NotFound();
+        if (!await _context.Docentes.AnyAsync(d => d.Id == id, ct))
+            return NotFound(new { mensaje = "El docente no existe." });
 
-        docente.Registro = dto.Registro;
-        docente.Ci = dto.Ci;
-        docente.Nombre = dto.Nombre;
-        docente.Telefono = dto.Telefono;
-        docente.Estado = string.IsNullOrWhiteSpace(dto.Estado) ? docente.Estado : dto.Estado;
+        dto.Id = id;
 
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        var tx = new Transaccion
+        {
+            Entidad = "Docente",
+            TipoOperacion = "ActualizarDocente",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
     // DELETE: api/docentes/{id}
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var docente = await _context.Docentes.FirstOrDefaultAsync(d => d.Id == id, ct);
-        if (docente is null) return NotFound();
+        if (!await _context.Docentes.AnyAsync(d => d.Id == id, ct))
+            return NotFound(new { mensaje = "El docente no existe." });
 
-        _context.Docentes.Remove(docente);
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        var payload = new { Id = id };
+
+        var tx = new Transaccion
+        {
+            Entidad = "Docente",
+            TipoOperacion = "EliminarDocente",
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpGet("estado/{txId:guid}")]
+    public async Task<IActionResult> Estado(Guid txId, CancellationToken ct)
+    {
+        var tx = await _store.GetAsync(txId);
+        if (tx is null) return NotFound(new { mensaje = "Transacción no encontrada" });
+        return Ok(new { id = tx.Id, estado = tx.Estado });
     }
 
     private static DocenteDto ToDto(Docente d) => new()

@@ -1,6 +1,27 @@
 [
   {
-    "url": "/api/inscripciones/async",
+    "url": "http://localhost:5001/api/periodosacademicosasync/async",
+    "method": "POST",
+    "body": {
+      "gestion": "2025-1",
+      "fechaInicio": "2025-02-01T00:00:00Z",
+      "fechaFin": "2025-06-30T00:00:00Z"
+    }
+  },
+  {
+    "url": "http://localhost:5001/api/estudiantesasync/async",
+    "method": "POST",
+    "body": {
+      "registro": "20251234",
+      "ci": "1234567",
+      "nombre": "Juan Perez",
+      "email": "juan.perez@email.com",
+      "password": "password123",
+      "carreraId": 1
+    }
+  },
+  {
+    "url": "http://localhost:5001/api/inscripcionesasync/async",
     "method": "POST",
     "body": {
       "registro": "20251234",
@@ -8,23 +29,21 @@
     }
   },
   {
-    "url": "/api/inscripciones/1/detalles/async",
+    "url": "http://localhost:5001/api/inscripcionesasync/detalles/async",
     "method": "POST",
     "body": {
+      "registro": "20251234",
+      "gestion": "2025-1",
       "materiaCodigo": "MAT101",
       "grupo": "A"
     }
   },
   {
-    "url": "/api/inscripciones/1/detalles/por-materia/async",
-    "method": "DELETE",
+    "url": "http://localhost:5001/api/inscripcionesasync/finalizar/async",
+    "method": "POST",
     "body": {
-      "materiaCodigo": "MAT101",
-      "grupo": "A"
+      "registro": "20251234",
+      "gestion": "2025-1"
     }
-  },
-  {
-    "url": "/api/inscripciones/1/finalizar/async",
-    "method": "POST"
   }
 ]

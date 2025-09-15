@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
@@ -5,17 +6,25 @@ using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
 using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos.response;
+using TAREATOPICOS.ServicioA.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers.Sincrono;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-public class GruposMateriaController : ControllerBase
+// [Authorize]
+public class GruposMateriaAsyncController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public GruposMateriaController(ServicioAContext context) => _context = context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
+    public GruposMateriaAsyncController(ServicioAContext context, IBackgroundTaskQueue queue, ITransaccionStore store)
+    {
+        _context = context;
+        _queue = queue;
+        _store = store;
+    }
 /*
     [HttpGet]
     public async Task<ActionResult<IEnumerable<GrupoMateriaResponseDto>>> Get([FromQuery] int? periodoId, [FromQuery] int? materiaId, [FromQuery] bool soloActivos = true, CancellationToken ct = default)
@@ -89,52 +98,77 @@ public async Task<ActionResult<GrupoMateriaResponseDto>> GetById(int id, Cancell
 
     return Ok(ToResponseDTO(g));
 }
-    [HttpPost]
-    public async Task<ActionResult<GrupoMateriaRequestDto>> Create([FromBody] GrupoMateriaRequestDto dto, CancellationToken ct)
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] GrupoMateriaRequestDto dto, CancellationToken ct)
     {
-        var entity = new GrupoMateria
+        // Validaciones previas
+        var materia = await _context.Materias.AnyAsync(m => m.Id == dto.MateriaId, ct);
+        if (!materia) return BadRequest("La materia especificada no existe.");
+
+        var tx = new Transaccion
         {
-            Grupo = dto.Grupo,
-            Cupo = dto.Cupo,
-            Estado = string.IsNullOrWhiteSpace(dto.Estado) ? "ACTIVO" : dto.Estado,
-            MateriaId = dto.MateriaId,
-            DocenteId = dto.DocenteId,
-            PeriodoId = dto.PeriodoId,
-            HorarioId = dto.HorarioId,
-            AulaId = dto.AulaId
+            Entidad = "GrupoMateria",
+            TipoOperacion = "CrearGrupoMateria",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
         };
-        _context.GruposMaterias.Add(entity);
-        await _context.SaveChangesAsync(ct);
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDTO(entity));
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] GrupoMateriaRequestDto dto, CancellationToken ct)
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] GrupoMateriaRequestDto dto, CancellationToken ct)
     {
-        var g = await _context.GruposMaterias.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (g is null) return NotFound();
+        if (!await _context.GruposMaterias.AnyAsync(g => g.Id == id, ct))
+            return NotFound(new { mensaje = "El grupo de materia no existe." });
 
-        g.Grupo = dto.Grupo;
-        g.Cupo = dto.Cupo;
-        g.Estado = dto.Estado;
-        g.MateriaId = dto.MateriaId;
-        g.DocenteId = dto.DocenteId;
-        g.PeriodoId = dto.PeriodoId;
-        g.HorarioId = dto.HorarioId;
-        g.AulaId = dto.AulaId;
+        dto.Id = id;
 
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        var tx = new Transaccion
+        {
+            Entidad = "GrupoMateria",
+            TipoOperacion = "ActualizarGrupoMateria",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
     {
-        var g = await _context.GruposMaterias.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (g is null) return NotFound();
-        _context.GruposMaterias.Remove(g);
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        if (!await _context.GruposMaterias.AnyAsync(g => g.Id == id, ct))
+            return NotFound(new { mensaje = "El grupo de materia no existe." });
+
+        var payload = new { Id = id };
+
+        var tx = new Transaccion
+        {
+            Entidad = "GrupoMateria",
+            TipoOperacion = "EliminarGrupoMateria",
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpGet("estado/{txId:guid}")]
+    public async Task<IActionResult> Estado(Guid txId, CancellationToken ct)
+    {
+        var tx = await _store.GetAsync(txId);
+        if (tx is null) return NotFound(new { mensaje = "Transacción no encontrada" });
+        return Ok(new { id = tx.Id, estado = tx.Estado });
     }
 
     private static GrupoMateriaRequestDto ToDTO(GrupoMateria g) => new()

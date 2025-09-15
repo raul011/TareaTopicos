@@ -46,19 +46,23 @@ public class InscripcionesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDTO(entity));
     }
 
-    // GET: api/inscripciones/{id}
-    [HttpGet("{id:int}")]
-public async Task<ActionResult<InscripcionResponseDto>> GetById(int id, CancellationToken ct)
-{
-    var i = await _context.Inscripciones
-    .AsNoTracking()
-    .Include(x => x.Estudiante)
-        .ThenInclude(e => e.Carrera)
-    .Include(x => x.Periodo)
-    .FirstOrDefaultAsync(x => x.Id == id, ct);
+    // GET: api/inscripciones/por-estudiante/{registro}/gestion/{gestion}
+    [HttpGet("por-estudiante/{registro}/gestion/{gestion}")]
+    public async Task<ActionResult<InscripcionResponseDto>> GetById(string registro, string gestion, CancellationToken ct)
+    {
+        var inscripcion = await _context.Inscripciones
+            .AsNoTracking()
+            .Include(i => i.Estudiante)
+                .ThenInclude(e => e.Carrera)
+            .Include(i => i.Periodo)
+            .FirstOrDefaultAsync(i => i.Estudiante.Registro == registro && i.Periodo.Gestion == gestion, ct);
 
-    return i is null ? NotFound() : Ok(ToResponseDTO(i));
-}
+        if (inscripcion is null)
+        {
+            return NotFound("No se encontró una inscripción para el estudiante y gestión especificados.");
+        }
+        return Ok(ToResponseDTO(inscripcion));
+    }
 
     // GET: api/inscripciones/por-estudiante/{estudianteId}
     [HttpGet("por-estudiante/{registro}")]
@@ -75,23 +79,37 @@ public async Task<ActionResult<InscripcionResponseDto>> GetById(int id, Cancella
         return Ok(list.Select(ToDTO));
     }
 
-    // GET: api/inscripciones/{id}/detalles
-    [HttpGet("{id:int}/detalles")]
-    public async Task<ActionResult<IEnumerable<DetalleInscripcionDto>>> GetDetalles(int id, CancellationToken ct)
+    // GET: api/inscripciones/por-estudiante/{registro}/gestion/{gestion}/detalles
+    [HttpGet("por-estudiante/{registro}/gestion/{gestion}/detalles")]
+    public async Task<ActionResult<IEnumerable<DetalleInscripcionDto>>> GetDetalles(string registro, string gestion, CancellationToken ct)
     {
+        var inscripcion = await _context.Inscripciones
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Estudiante.Registro == registro && i.Periodo.Gestion == gestion, ct);
+
+        if (inscripcion is null)
+        {
+            return NotFound("No se encontró una inscripción para el estudiante y gestión especificados.");
+        }
+
         var detalles = await _context.DetallesInscripciones
             .AsNoTracking()
-            .Where(d => d.InscripcionId == id)
+            .Where(d => d.InscripcionId == inscripcion.Id)
             .ToListAsync(ct);
 
         return Ok(detalles.Select(ToDTO));
     }
 
-    // POST: api/inscripciones/{id}/finalizar
-    [HttpPost("{id:int}/finalizar")]
-    public async Task<IActionResult> Finalizar(int id, CancellationToken ct)
+    // POST: api/inscripciones/finalizar
+    [HttpPost("finalizar")]
+    public async Task<IActionResult> Finalizar([FromBody] FinalizarInscripcionRequestDto dto, CancellationToken ct)
     {
-        var insc = await _context.Inscripciones.Include(i => i.Detalles).FirstOrDefaultAsync(i => i.Id == id, ct);
+        var insc = await _context.Inscripciones
+            .Include(i => i.Detalles)
+            .Include(i => i.Estudiante)
+            .Include(i => i.Periodo)
+            .FirstOrDefaultAsync(i => i.Estudiante.Registro == dto.Registro && i.Periodo.Gestion == dto.Gestion, ct);
+
         if (insc is null) return NotFound();
         if (!insc.Detalles.Any()) return BadRequest("No se puede finalizar sin materias.");
 

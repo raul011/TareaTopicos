@@ -1,19 +1,29 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos.request;
+using TAREATOPICOS.ServicioA.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers.Sincrono;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-public class PeriodosAcademicosController : ControllerBase
+// [Authorize]
+public class PeriodosAcademicosAsyncController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public PeriodosAcademicosController(ServicioAContext context) => _context = context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
+
+    public PeriodosAcademicosAsyncController(ServicioAContext context, IBackgroundTaskQueue queue, ITransaccionStore store)
+    {
+        _context = context;
+        _queue = queue;
+        _store = store;
+    }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PeriodoAcademicoRequestDto>>> GetAll(CancellationToken ct)
@@ -29,39 +39,78 @@ public class PeriodosAcademicosController : ControllerBase
         return p is null ? NotFound() : Ok(ToDTO(p));
     }
 
-    [HttpPost]
-    public async Task<ActionResult<PeriodoAcademicoRequestDto>> Create([FromBody] PeriodoAcademicoRequestDto dto, CancellationToken ct)
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] PeriodoAcademicoRequestDto dto, CancellationToken ct)
     {
         if (dto.FechaFin < dto.FechaInicio) return BadRequest("La fecha fin no puede ser anterior a la fecha inicio.");
+        if (await _context.PeriodosAcademicos.AnyAsync(p => p.Gestion == dto.Gestion, ct))
+            return Conflict(new { mensaje = $"La gestión '{dto.Gestion}' ya existe." });
 
-        var p = new PeriodoAcademico { Gestion = dto.Gestion, FechaInicio = dto.FechaInicio, FechaFin = dto.FechaFin };
-        _context.PeriodosAcademicos.Add(p);
-        await _context.SaveChangesAsync(ct);
-        return CreatedAtAction(nameof(Get), new { id = p.Id }, ToDTO(p));
+        var tx = new Transaccion
+        {
+            Entidad = "PeriodoAcademico",
+            TipoOperacion = "CrearPeriodo",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] PeriodoAcademicoRequestDto dto, CancellationToken ct)
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] PeriodoAcademicoRequestDto dto, CancellationToken ct)
     {
-        var p = await _context.PeriodosAcademicos.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (p is null) return NotFound();
+        if (!await _context.PeriodosAcademicos.AnyAsync(p => p.Id == id, ct))
+            return NotFound(new { mensaje = "El período académico no existe." });
         if (dto.FechaFin < dto.FechaInicio) return BadRequest("La fecha fin no puede ser anterior a la fecha inicio.");
 
-        p.Gestion = dto.Gestion;
-        p.FechaInicio = dto.FechaInicio;
-        p.FechaFin = dto.FechaFin;
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        dto.Id = id;
+
+        var tx = new Transaccion
+        {
+            Entidad = "PeriodoAcademico",
+            TipoOperacion = "ActualizarPeriodo",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
     {
-        var p = await _context.PeriodosAcademicos.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (p is null) return NotFound();
-        _context.PeriodosAcademicos.Remove(p);
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
+        if (!await _context.PeriodosAcademicos.AnyAsync(p => p.Id == id, ct))
+            return NotFound(new { mensaje = "El período académico no existe." });
+
+        var payload = new { Id = id };
+
+        var tx = new Transaccion
+        {
+            Entidad = "PeriodoAcademico",
+            TipoOperacion = "EliminarPeriodo",
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA"
+        };
+
+        await _store.AddAsync(tx);
+        await _queue.EnqueueAsync(tx);
+
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpGet("estado/{txId:guid}")]
+    public async Task<IActionResult> Estado(Guid txId, CancellationToken ct)
+    {
+        var tx = await _store.GetAsync(txId);
+        if (tx is null) return NotFound(new { mensaje = "Transacción no encontrada" });
+        return Ok(new { id = tx.Id, estado = tx.Estado });
     }
 
     private static PeriodoAcademicoRequestDto ToDTO(PeriodoAcademico p) => new()
