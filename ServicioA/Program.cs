@@ -86,8 +86,12 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor
 
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.PeriodoAcademicoProcessor>();
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
-                           TAREATOPICOS.ServicioA.Services.Processors.PeriodoAcademicoProcessor>();                           
+                           TAREATOPICOS.ServicioA.Services.Processors.PeriodoAcademicoProcessor>();    
 
+
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.PlanDeEstudioProcessor>();
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
+                           TAREATOPICOS.ServicioA.Services.Processors.PlanDeEstudioProcessor>();  
 
 // Router (IQueueProcessor) → DefaultProcessor
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IQueueProcessor,

@@ -38,7 +38,9 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                 else if (typeName.Contains("EstudianteProcessor", StringComparison.OrdinalIgnoreCase))
                     _map["Estudiante"] = processor;    
                 else if (typeName.Contains("PeriodoAcademicoProcessor", StringComparison.OrdinalIgnoreCase))
-                    _map["PeriodoAcademico"] = processor;    
+                    _map["PeriodoAcademico"] = processor; 
+                else if (typeName.Contains("PlanDeEstudioProcessor", StringComparison.OrdinalIgnoreCase))
+                    _map["PlanDeEstudio"] = processor;        
                 // Agrega más 'else if' para futuras entidades aquí.
             }
         }
