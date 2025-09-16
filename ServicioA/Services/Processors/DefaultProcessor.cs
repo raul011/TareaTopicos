@@ -22,14 +22,19 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
             // Construimos el mapa Entidad -> IProcessor a partir de los processors registrados.
             // Si tuvieras múltiples entidades, aquí irías agregando más entradas.
             _map = new ConcurrentDictionary<string, IProcessor>(StringComparer.OrdinalIgnoreCase);
-
-            // Buscar el processor de Nivel (implementa IProcessor)
-            var nivelProc = processors.FirstOrDefault(p => p.GetType().Name.Contains("NivelProcessor", StringComparison.OrdinalIgnoreCase));
-            if (nivelProc is not null)
-                _map["Nivel"] = nivelProc;
-
-            // Si necesitas más entidades, registra aquí:
-            // _map["OtraEntidad"] = processors.First(p => p is OtraEntidadProcessor);
+            
+            // Itera sobre todos los procesadores inyectados y los mapea por su nombre de entidad.
+            foreach (var processor in processors)
+            {
+                var typeName = processor.GetType().Name;
+                if (typeName.Contains("NivelProcessor", StringComparison.OrdinalIgnoreCase))
+                    _map["Nivel"] = processor;
+                else if (typeName.Contains("MateriaProcessor", StringComparison.OrdinalIgnoreCase))
+                    _map["Materia"] = processor;
+                else if (typeName.Contains("AulaProcessor", StringComparison.OrdinalIgnoreCase))
+                    _map["Aula"] = processor;
+                // Agrega más 'else if' para futuras entidades aquí.
+            }
         }
 
         public async Task ProcessAsync(Transaccion tx, CancellationToken ct)

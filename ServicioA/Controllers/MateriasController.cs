@@ -92,134 +92,141 @@ public class MateriasController : ControllerBase
 
     // POST: api/materias
     [HttpPost]
-    public async Task<ActionResult<MateriaRequestDto>> Create([FromBody] MateriaRequestDto dto, CancellationToken ct = default)
+public async Task<ActionResult<MateriaRequestDto>> Create([FromBody] MateriaRequestDto dto, CancellationToken ct = default)
+{
+    var existe = await _db.Materias.AnyAsync(m => m.Codigo == dto.Codigo, ct);
+    if (existe)
+        return Conflict(new { mensaje = $"Ya existe una materia con el código '{dto.Codigo}'." });
+
+    var entity = new Materia
     {
-        var entity = new Materia
-        {
-            Codigo = dto.Codigo,
-            Nombre = dto.Nombre,
-            Creditos = dto.Creditos,
-            NivelId = dto.NivelId
-        };
+        Codigo = dto.Codigo,
+        Nombre = dto.Nombre,
+        Creditos = dto.Creditos,
+        NivelId = dto.NivelId
+    };
 
-        _db.Materias.Add(entity);
-        await _db.SaveChangesAsync(ct);
+    _db.Materias.Add(entity);
+    await _db.SaveChangesAsync(ct);
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
-    }
+    return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
+}
 
     // PUT: api/materias/{id}
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] MateriaRequestDto dto, CancellationToken ct = default)
-    {
-        var materia = await _db.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
-        if (materia is null) return NotFound();
+    [HttpPut("codigo/{codigo}")]
+public async Task<IActionResult> UpdateByCodigo(string codigo, [FromBody] MateriaRequestDto dto, CancellationToken ct = default)
+{
+    var materia = await _db.Materias.FirstOrDefaultAsync(m => m.Codigo == codigo, ct);
+    if (materia is null) return NotFound();
 
-        materia.Codigo = dto.Codigo;
-        materia.Nombre = dto.Nombre;
-        materia.Creditos = dto.Creditos;
-        materia.NivelId = dto.NivelId;
+    materia.Nombre = dto.Nombre;
+    materia.Creditos = dto.Creditos;
+    materia.NivelId = dto.NivelId;
 
-        await _db.SaveChangesAsync(ct);
-        return NoContent();
-    }
+    await _db.SaveChangesAsync(ct);
+    return NoContent();
+}
 
     // DELETE: api/materias/{id}
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
-    {
-        var materia = await _db.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
-        if (materia is null) return NotFound();
+    [HttpDelete("codigo/{codigo}")]
+public async Task<IActionResult> DeleteByCodigo(string codigo, CancellationToken ct = default)
+{
+    var materia = await _db.Materias.FirstOrDefaultAsync(m => m.Codigo == codigo, ct);
+    if (materia is null) return NotFound();
 
-        _db.Materias.Remove(materia);
-        await _db.SaveChangesAsync(ct);
-        return NoContent();
-    }
+    _db.Materias.Remove(materia);
+    await _db.SaveChangesAsync(ct);
+    return NoContent();
+}
 
     // ===  ENDPOINTS ASÍNCRONOS (ESCRITURA ENCOLADA) ===
 
     // POST /api/materias/async
     [HttpPost("async")]
-    public async Task<IActionResult> CrearMateriaAsync(
-        [FromBody] MateriaRequestDto materiaDto,
-        [FromQuery] string? queue = "default",
-        [FromQuery] int priority = 1,
-        [FromQuery] DateTimeOffset? notBeforeUtc = null,
-        CancellationToken ct = default)
-    {
-        var tx = new Transaccion
-        {
-            TipoOperacion = "POST",
-            Entidad = "Materia",
-            Payload = JsonSerializer.Serialize(materiaDto),
-            Estado = "EN_COLA",
-            Priority = Math.Clamp(priority, 0, 2),
-            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow
-        };
-        tx.CallbackUrl ??= _cfg["Webhook:DefaultUrl"];
-        tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
-        tx.IdempotencyKey ??= tx.Id.ToString();
+public async Task<IActionResult> CrearMateriaAsync(
+    [FromBody] MateriaRequestDto materiaDto,
+    [FromQuery] string? queue = "default",
+    [FromQuery] int priority = 1,
+    [FromQuery] DateTimeOffset? notBeforeUtc = null,
+    CancellationToken ct = default)
+{
+    var existe = await _db.Materias.AnyAsync(m => m.Codigo == materiaDto.Codigo, ct);
+    if (existe)
+        return Conflict(new { mensaje = $"Ya existe una materia con el código '{materiaDto.Codigo}'." });
 
-        await _qm.EnqueueAsync(tx, queue, ct);
-        return Accepted(new { id = tx.Id, estado = tx.Estado });
-    }
+    var tx = new Transaccion
+    {
+        TipoOperacion = "POST",
+        Entidad = "Materia",
+        Payload = JsonSerializer.Serialize(materiaDto),
+        Estado = "EN_COLA",
+        Priority = Math.Clamp(priority, 0, 2),
+        NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+        CallbackUrl = _cfg["Webhook:DefaultUrl"],
+        CallbackSecret = _cfg["Webhook:DefaultSecret"],
+        IdempotencyKey = Guid.NewGuid().ToString()
+    };
+
+    await _qm.EnqueueAsync(tx, queue, ct);
+    return Accepted(new { id = tx.Id, estado = tx.Estado });
+}
 
     // PUT /api/materias/async/{id}
-    [HttpPut("async/{id:int}")]
-    public async Task<IActionResult> ActualizarMateriaAsync(
-        int id,
-        [FromBody] MateriaRequestDto materiaDto,
-        [FromQuery] string? queue = "default",
-        [FromQuery] int priority = 1,
-        [FromQuery] DateTimeOffset? notBeforeUtc = null,
-        CancellationToken ct = default)
+    [HttpPut("async/codigo/{codigo}")]
+public async Task<IActionResult> ActualizarMateriaAsyncPorCodigo(
+    string codigo,
+    [FromBody] MateriaRequestDto dto,
+    [FromQuery] string? queue = "default",
+    [FromQuery] int priority = 1,
+    [FromQuery] DateTimeOffset? notBeforeUtc = null,
+    CancellationToken ct = default)
+{
+    dto.Codigo = codigo;
+
+    var tx = new Transaccion
     {
-        materiaDto.Id = id; // Aseguramos que el Id del DTO coincida con el de la ruta
+        TipoOperacion = "PUT",
+        Entidad = "Materia",
+        Payload = JsonSerializer.Serialize(dto),
+        Estado = "EN_COLA",
+        Priority = Math.Clamp(priority, 0, 2),
+        NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+        CallbackUrl = _cfg["Webhook:DefaultUrl"],
+        CallbackSecret = _cfg["Webhook:DefaultSecret"],
+        IdempotencyKey = Guid.NewGuid().ToString()
+    };
 
-        var tx = new Transaccion
-        {
-            TipoOperacion = "PUT",
-            Entidad = "Materia",
-            Payload = JsonSerializer.Serialize(materiaDto),
-            Estado = "EN_COLA",
-            Priority = Math.Clamp(priority, 0, 2),
-            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow
-        };
-        tx.CallbackUrl ??= _cfg["Webhook:DefaultUrl"];
-        tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
-        tx.IdempotencyKey ??= tx.Id.ToString();
-
-        await _qm.EnqueueAsync(tx, queue, ct);
-        return Accepted(new { id = tx.Id, estado = tx.Estado });
-    }
+    await _qm.EnqueueAsync(tx, queue, ct);
+    return Accepted(new { id = tx.Id, estado = tx.Estado });
+}
 
     // DELETE /api/materias/async/{id}
-    [HttpDelete("async/{id:int}")]
-    public async Task<IActionResult> EliminarMateriaAsync(
-        int id,
-        [FromQuery] string? queue = "default",
-        [FromQuery] int priority = 1,
-        [FromQuery] DateTimeOffset? notBeforeUtc = null,
-        CancellationToken ct = default)
+    [HttpDelete("async/codigo/{codigo}")]
+public async Task<IActionResult> EliminarMateriaAsyncPorCodigo(
+    string codigo,
+    [FromQuery] string? queue = "default",
+    [FromQuery] int priority = 1,
+    [FromQuery] DateTimeOffset? notBeforeUtc = null,
+    CancellationToken ct = default)
+{
+    var payload = new { Codigo = codigo };
+
+    var tx = new Transaccion
     {
-        var payload = new { Id = id };
+        TipoOperacion = "DELETE",
+        Entidad = "Materia",
+        Payload = JsonSerializer.Serialize(payload),
+        Estado = "EN_COLA",
+        Priority = Math.Clamp(priority, 0, 2),
+        NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+        CallbackUrl = _cfg["Webhook:DefaultUrl"],
+        CallbackSecret = _cfg["Webhook:DefaultSecret"],
+        IdempotencyKey = Guid.NewGuid().ToString()
+    };
 
-        var tx = new Transaccion
-        {
-            TipoOperacion = "DELETE",
-            Entidad = "Materia",
-            Payload = JsonSerializer.Serialize(payload),
-            Estado = "EN_COLA",
-            Priority = Math.Clamp(priority, 0, 2),
-            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow
-        };
-        tx.CallbackUrl ??= _cfg["Webhook:DefaultUrl"];
-        tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
-        tx.IdempotencyKey ??= tx.Id.ToString();
-
-        await _qm.EnqueueAsync(tx, queue, ct);
-        return Accepted(new { id = tx.Id, estado = tx.Estado });
-    }
+    await _qm.EnqueueAsync(tx, queue, ct);
+    return Accepted(new { id = tx.Id, estado = tx.Estado });
+}
 
     // GET /api/materias/estado/{id}
     [HttpGet("estado/{id:guid}")]

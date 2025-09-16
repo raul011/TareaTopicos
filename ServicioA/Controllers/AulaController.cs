@@ -66,30 +66,29 @@ public class AulasController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDTO(entity));
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] AulaDto dto, CancellationToken ct = default)
-    {
-        var aula = await _context.Aulas.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (aula is null) return NotFound();
+    [HttpPut("codigo/{codigo}")]
+public async Task<IActionResult> UpdateByCodigo(string codigo, [FromBody] AulaDto dto, CancellationToken ct = default)
+{
+    var aula = await _context.Aulas.FirstOrDefaultAsync(a => a.Codigo == codigo, ct);
+    if (aula is null) return NotFound();
 
-        aula.Codigo = dto.Codigo;
-        aula.Capacidad = dto.Capacidad;
-        aula.Ubicacion = dto.Ubicacion;
+    aula.Capacidad = dto.Capacidad;
+    aula.Ubicacion = dto.Ubicacion;
 
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
-    }
+    await _context.SaveChangesAsync(ct);
+    return NoContent();
+}
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
-    {
-        var aula = await _context.Aulas.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (aula is null) return NotFound();
+    [HttpDelete("codigo/{codigo}")]
+public async Task<IActionResult> DeleteByCodigo(string codigo, CancellationToken ct = default)
+{
+    var aula = await _context.Aulas.FirstOrDefaultAsync(a => a.Codigo == codigo, ct);
+    if (aula is null) return NotFound();
 
-        _context.Aulas.Remove(aula);
-        await _context.SaveChangesAsync(ct);
-        return NoContent();
-    }
+    _context.Aulas.Remove(aula);
+    await _context.SaveChangesAsync(ct);
+    return NoContent();
+}
 
     // === ENDPOINTS ASÍNCRONOS ===
 
@@ -118,60 +117,60 @@ public class AulasController : ControllerBase
         return Accepted(new { id = tx.Id, estado = tx.Estado });
     }
 
-    [HttpPut("async/{id:int}")]
-    public async Task<IActionResult> ActualizarAulaAsync(
-        int id,
-        [FromBody] AulaDto dto,
-        [FromQuery] string? queue = "default",
-        [FromQuery] int priority = 1,
-        [FromQuery] DateTimeOffset? notBeforeUtc = null,
-        CancellationToken ct = default)
+    [HttpPut("async/codigo/{codigo}")]
+public async Task<IActionResult> ActualizarAulaAsyncPorCodigo(
+    string codigo,
+    [FromBody] AulaDto dto,
+    [FromQuery] string? queue = "default",
+    [FromQuery] int priority = 1,
+    [FromQuery] DateTimeOffset? notBeforeUtc = null,
+    CancellationToken ct = default)
+{
+    dto.Codigo = codigo;
+
+    var tx = new Transaccion
     {
-        dto.Id = id;
+        TipoOperacion = "PUT",
+        Entidad = "Aula",
+        Payload = JsonSerializer.Serialize(dto),
+        Estado = "EN_COLA",
+        Priority = Math.Clamp(priority, 0, 2),
+        NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+        CallbackUrl = _cfg["Webhook:DefaultUrl"],
+        CallbackSecret = _cfg["Webhook:DefaultSecret"],
+        IdempotencyKey = Guid.NewGuid().ToString()
+    };
 
-        var tx = new Transaccion
-        {
-            TipoOperacion = "PUT",
-            Entidad = "Aula",
-            Payload = JsonSerializer.Serialize(dto),
-            Estado = "EN_COLA",
-            Priority = Math.Clamp(priority, 0, 2),
-            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
-            CallbackUrl = _cfg["Webhook:DefaultUrl"],
-            CallbackSecret = _cfg["Webhook:DefaultSecret"],
-            IdempotencyKey = Guid.NewGuid().ToString()
-        };
+    await _qm.EnqueueAsync(tx, queue, ct);
+    return Accepted(new { id = tx.Id, estado = tx.Estado });
+}
 
-        await _qm.EnqueueAsync(tx, queue, ct);
-        return Accepted(new { id = tx.Id, estado = tx.Estado });
-    }
+    [HttpDelete("async/codigo/{codigo}")]
+public async Task<IActionResult> EliminarAulaAsyncPorCodigo(
+    string codigo,
+    [FromQuery] string? queue = "default",
+    [FromQuery] int priority = 1,
+    [FromQuery] DateTimeOffset? notBeforeUtc = null,
+    CancellationToken ct = default)
+{
+    var payload = new { Codigo = codigo };
 
-    [HttpDelete("async/{id:int}")]
-    public async Task<IActionResult> EliminarAulaAsync(
-        int id,
-        [FromQuery] string? queue = "default",
-        [FromQuery] int priority = 1,
-        [FromQuery] DateTimeOffset? notBeforeUtc = null,
-        CancellationToken ct = default)
+    var tx = new Transaccion
     {
-        var payload = new { Id = id };
+        TipoOperacion = "DELETE",
+        Entidad = "Aula",
+        Payload = JsonSerializer.Serialize(payload),
+        Estado = "EN_COLA",
+        Priority = Math.Clamp(priority, 0, 2),
+        NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+        CallbackUrl = _cfg["Webhook:DefaultUrl"],
+        CallbackSecret = _cfg["Webhook:DefaultSecret"],
+        IdempotencyKey = Guid.NewGuid().ToString()
+    };
 
-        var tx = new Transaccion
-        {
-            TipoOperacion = "DELETE",
-            Entidad = "Aula",
-            Payload = JsonSerializer.Serialize(payload),
-            Estado = "EN_COLA",
-            Priority = Math.Clamp(priority, 0, 2),
-            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
-            CallbackUrl = _cfg["Webhook:DefaultUrl"],
-            CallbackSecret = _cfg["Webhook:DefaultSecret"],
-            IdempotencyKey = Guid.NewGuid().ToString()
-        };
-
-        await _qm.EnqueueAsync(tx, queue, ct);
-        return Accepted(new { id = tx.Id, estado = tx.Estado });
-    }
+    await _qm.EnqueueAsync(tx, queue, ct);
+    return Accepted(new { id = tx.Id, estado = tx.Estado });
+}
 
     [HttpGet("estado/{id:guid}")]
     public async Task<IActionResult> GetEstado(Guid id, CancellationToken ct = default)

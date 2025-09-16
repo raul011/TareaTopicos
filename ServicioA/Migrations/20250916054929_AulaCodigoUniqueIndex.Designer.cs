@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TAREATOPICOS.ServicioA.Data;
@@ -11,9 +12,11 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    partial class ServicioAContextModelSnapshot : ModelSnapshot
+    [Migration("20250916054929_AulaCodigoUniqueIndex")]
+    partial class AulaCodigoUniqueIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1385,9 +1388,6 @@ namespace ServicioA.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Codigo")
-                        .IsUnique();
 
                     b.HasIndex("NivelId");
 

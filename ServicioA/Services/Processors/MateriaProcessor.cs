@@ -37,7 +37,7 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                 switch (tx.TipoOperacion)
                 {
                     case "POST":
-                        {
+                       {
                             var dto = tx.Payload is null ? null : JsonSerializer.Deserialize<MateriaRequestDto>(tx.Payload, opts);
                             if (dto is null)
                             {
@@ -52,6 +52,13 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                                 return;
                             }
 
+                            var yaExiste = await _db.Materias.AnyAsync(m => m.Codigo == dto.Codigo, ct);
+                            if (yaExiste)
+                            {
+                                Skip(tx, $"Ya existe una materia con el código '{dto.Codigo}'.");
+                                return;
+                            }
+
                             var materia = new Materia
                             {
                                 Codigo = dto.Codigo,
@@ -62,64 +69,60 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
 
                             _db.Materias.Add(materia);
                             break;
-                        }
+                        }   
 
                     case "PUT":
-                        {
-                            var dto = tx.Payload is null ? null : JsonSerializer.Deserialize<MateriaRequestDto>(tx.Payload, opts);
-                            if (dto is null || dto.Id == 0)
-                            {
-                                Skip(tx, "Payload vacío o sin Id para PUT/Materia");
-                                return;
-                            }
+{
+    var dto = tx.Payload is null ? null : JsonSerializer.Deserialize<MateriaRequestDto>(tx.Payload, opts);
+    if (dto is null || string.IsNullOrWhiteSpace(dto.Codigo))
+    {
+        Skip(tx, "Payload vacío o sin Código para PUT/Materia");
+        return;
+    }
 
-                            var existente = await _db.Materias.FirstOrDefaultAsync(m => m.Id == dto.Id, ct);
-                            if (existente is null)
-                            {
-                                Skip(tx, $"Materia con Id {dto.Id} no existe");
-                                return;
-                            }
+    var existente = await _db.Materias.FirstOrDefaultAsync(m => m.Codigo == dto.Codigo, ct);
+    if (existente is null)
+    {
+        Skip(tx, $"Materia con Código '{dto.Codigo}' no existe");
+        return;
+    }
 
-                            var nivelExiste = await _db.Niveles.AnyAsync(n => n.Id == dto.NivelId, ct);
-                            if (!nivelExiste)
-                            {
-                                Skip(tx, $"El NivelId {dto.NivelId} no existe.");
-                                return;
-                            }
+    var nivelExiste = await _db.Niveles.AnyAsync(n => n.Id == dto.NivelId, ct);
+    if (!nivelExiste)
+    {
+        Skip(tx, $"El NivelId {dto.NivelId} no existe.");
+        return;
+    }
 
-                            existente.Codigo = dto.Codigo;
-                            existente.Nombre = dto.Nombre;
-                            existente.Creditos = dto.Creditos;
-                            existente.NivelId = dto.NivelId;
-                            break;
-                        }
+    existente.Nombre = dto.Nombre;
+    existente.Creditos = dto.Creditos;
+    existente.NivelId = dto.NivelId;
+    break;
+}
 
                     case "DELETE":
-                        {
-                            var dto = tx.Payload is null ? null : JsonSerializer.Deserialize<MateriaRequestDto>(tx.Payload, opts);
-                            if (dto is null || dto.Id == 0)
-                            {
-                                Skip(tx, "Payload vacío o sin Id para DELETE/Materia");
-                                return;
-                            }
+{
+    var payload = JsonSerializer.Deserialize<Dictionary<string, string>>(tx.Payload ?? "{}", opts);
+    if (!payload.TryGetValue("Codigo", out var codigo) || string.IsNullOrWhiteSpace(codigo))
+    {
+        Skip(tx, "Payload vacío o sin Código para DELETE/Materia");
+        return;
+    }
 
-                            var entity = await _db.Materias.FirstOrDefaultAsync(m => m.Id == dto.Id, ct);
-                            if (entity is null)
-                            {
-                                Skip(tx, $"Materia con Id {dto.Id} no existe, se omite la eliminación.");
-                                await _guard.MarkProcessedAsync(tx.Id, ct); // Marcar como procesado para no reintentar
-                                tx.Estado = "COMPLETADO";
-                                return;
-                            }
+    var entity = await _db.Materias.FirstOrDefaultAsync(m => m.Codigo == codigo, ct);
+    if (entity is null)
+    {
+        Skip(tx, $"Materia con Código '{codigo}' no existe, se omite la eliminación.");
+        await _guard.MarkProcessedAsync(tx.Id, ct);
+        tx.Estado = "COMPLETADO";
+        return;
+    }
 
-                            _db.Materias.Remove(entity);
-                            break;
-                        }
+    _db.Materias.Remove(entity);
+    break;
+}
+} // <--- Fin del switch
 
-                    default:
-                        Skip(tx, $"Tipo de operación '{tx.TipoOperacion}' no soportado para Materia.");
-                        return;
-                }
 
                 _logger.LogInformation(" Guardando cambios para Tx {TxId}", tx.Id);
                 await _db.SaveChangesAsync(ct);
