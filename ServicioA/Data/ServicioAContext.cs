@@ -104,6 +104,11 @@ namespace TAREATOPICOS.ServicioA.Data
               .IsUnique();
 
 
+
+
+
+
+
             // Seeders opcionales
             TAREATOPICOS.ServicioA.Data.Seeders.NivelSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.MateriaSeeder.Seed(modelBuilder);

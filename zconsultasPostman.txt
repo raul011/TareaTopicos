@@ -48,6 +48,11 @@ docker exec -it universidad_db psql -U postgres -d universidad
 SELECT * FROM "Niveles";            
 SELECT * FROM "Aulas";
 SELECT * FROM "Materias";
+SELECT * FROM "Inscripciones";
+SELECT * FROM "GruposMaterias";
+SELECT * FROM "DetallesInscripciones";
+SELECT * FROM "Estudiantes";
+SELECT * FROM "Materias";
 
 
 \x off : para tabla bonito
