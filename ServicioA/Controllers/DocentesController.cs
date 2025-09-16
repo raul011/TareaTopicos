@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Text.Json;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos;
-using Microsoft.AspNetCore.Authorization;
+using TAREATOPICOS.ServicioA.Services;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
@@ -13,13 +15,20 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 public class DocentesController : ControllerBase
 {
     private readonly ServicioAContext _context;
+    private readonly QueueManager _qm;
+    private readonly ITransaccionStore _store;
+    private readonly IConfiguration _cfg;
 
-    public DocentesController(ServicioAContext context)
+    public DocentesController(ServicioAContext context, QueueManager qm, ITransaccionStore store, IConfiguration cfg)
     {
         _context = context;
+        _qm = qm;
+        _store = store;
+        _cfg = cfg;
     }
 
-    // GET: api/docentes
+    // === ENDPOINTS SÍNCRONOS ===
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<DocenteDto>>> GetAll(CancellationToken ct = default)
     {
@@ -31,18 +40,16 @@ public class DocentesController : ControllerBase
         return Ok(docentes.Select(ToDto));
     }
 
-    // GET: api/docentes/{id}
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<DocenteDto>> GetById(int id, CancellationToken ct = default)
+    [HttpGet("{registro}")]
+    public async Task<ActionResult<DocenteDto>> GetByRegistro(string registro, CancellationToken ct = default)
     {
         var docente = await _context.Docentes
             .AsNoTracking()
-            .FirstOrDefaultAsync(d => d.Id == id, ct);
+            .FirstOrDefaultAsync(d => d.Registro == registro, ct);
 
         return docente is null ? NotFound() : Ok(ToDto(docente));
     }
 
-    // POST: api/docentes
     [HttpPost]
     public async Task<ActionResult<DocenteDto>> Create([FromBody] DocenteDto dto, CancellationToken ct = default)
     {
@@ -58,17 +65,15 @@ public class DocentesController : ControllerBase
         _context.Docentes.Add(entity);
         await _context.SaveChangesAsync(ct);
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
+        return CreatedAtAction(nameof(GetByRegistro), new { registro = entity.Registro }, ToDto(entity));
     }
 
-    // PUT: api/docentes/{id}
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] DocenteDto dto, CancellationToken ct = default)
+    [HttpPut("{registro}")]
+    public async Task<IActionResult> Update(string registro, [FromBody] DocenteDto dto, CancellationToken ct = default)
     {
-        var docente = await _context.Docentes.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var docente = await _context.Docentes.FirstOrDefaultAsync(d => d.Registro == registro, ct);
         if (docente is null) return NotFound();
 
-        docente.Registro = dto.Registro;
         docente.Ci = dto.Ci;
         docente.Nombre = dto.Nombre;
         docente.Telefono = dto.Telefono;
@@ -78,11 +83,10 @@ public class DocentesController : ControllerBase
         return NoContent();
     }
 
-    // DELETE: api/docentes/{id}
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
+    [HttpDelete("{registro}")]
+    public async Task<IActionResult> Delete(string registro, CancellationToken ct = default)
     {
-        var docente = await _context.Docentes.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var docente = await _context.Docentes.FirstOrDefaultAsync(d => d.Registro == registro, ct);
         if (docente is null) return NotFound();
 
         _context.Docentes.Remove(docente);
@@ -90,6 +94,98 @@ public class DocentesController : ControllerBase
         return NoContent();
     }
 
+    // === ENDPOINTS ASÍNCRONOS ===
+
+    [HttpPost("async")]
+    public async Task<IActionResult> CrearDocenteAsync(
+        [FromBody] DocenteDto dto,
+        [FromQuery] string? queue = "default",
+        [FromQuery] int priority = 1,
+        [FromQuery] DateTimeOffset? notBeforeUtc = null,
+        CancellationToken ct = default)
+    {
+        var tx = new Transaccion
+        {
+            TipoOperacion = "POST",
+            Entidad = "Docente",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA",
+            Priority = Math.Clamp(priority, 0, 2),
+            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+            CallbackUrl = _cfg["Webhook:DefaultUrl"],
+            CallbackSecret = _cfg["Webhook:DefaultSecret"],
+            IdempotencyKey = Guid.NewGuid().ToString()
+        };
+
+        await _qm.EnqueueAsync(tx, queue, ct);
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpPut("async/{registro}")]
+    public async Task<IActionResult> ActualizarDocenteAsync(
+        string registro,
+        [FromBody] DocenteDto dto,
+        [FromQuery] string? queue = "default",
+        [FromQuery] int priority = 1,
+        [FromQuery] DateTimeOffset? notBeforeUtc = null,
+        CancellationToken ct = default)
+    {
+        dto.Registro = registro;
+
+        var tx = new Transaccion
+        {
+            TipoOperacion = "PUT",
+            Entidad = "Docente",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA",
+            Priority = Math.Clamp(priority, 0, 2),
+            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+            CallbackUrl = _cfg["Webhook:DefaultUrl"],
+            CallbackSecret = _cfg["Webhook:DefaultSecret"],
+            IdempotencyKey = Guid.NewGuid().ToString()
+        };
+
+        await _qm.EnqueueAsync(tx, queue, ct);
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpDelete("async/{registro}")]
+    public async Task<IActionResult> EliminarDocenteAsync(
+        string registro,
+        [FromQuery] string? queue = "default",
+        [FromQuery] int priority = 1,
+        [FromQuery] DateTimeOffset? notBeforeUtc = null,
+        CancellationToken ct = default)
+    {
+        var payload = new { Registro = registro };
+
+        var tx = new Transaccion
+        {
+            TipoOperacion = "DELETE",
+            Entidad = "Docente",
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA",
+            Priority = Math.Clamp(priority, 0, 2),
+            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+            CallbackUrl = _cfg["Webhook:DefaultUrl"],
+            CallbackSecret = _cfg["Webhook:DefaultSecret"],
+            IdempotencyKey = Guid.NewGuid().ToString()
+        };
+
+        await _qm.EnqueueAsync(tx, queue, ct);
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    [HttpGet("estado/{id:guid}")]
+    public async Task<IActionResult> GetEstado(Guid id, CancellationToken ct = default)
+    {
+        var tx = await _store.GetAsync(id, ct);
+        return tx is null
+            ? NotFound(new { mensaje = "Transacción no encontrada" })
+            : Ok(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    // === Mapeo DTO ===
     private static DocenteDto ToDto(Docente d) => new()
     {
         Id = d.Id,

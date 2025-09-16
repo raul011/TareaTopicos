@@ -73,6 +73,11 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.AulaProces
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.AulaProcessor>();
 
+// Registramos el nuevo procesador de Docentes
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.DocenteProcessor>();
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
+                           TAREATOPICOS.ServicioA.Services.Processors.DocenteProcessor>();
+
 
 // Router (IQueueProcessor) → DefaultProcessor
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IQueueProcessor,
