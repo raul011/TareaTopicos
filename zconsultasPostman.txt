@@ -46,7 +46,15 @@ HGETALL tx:1972b5fe-03e9-4ade-81a9-025ae16dfd79
 //BASE DE DefaultProcessor
 docker exec -it universidad_db psql -U postgres -d universidad
 SELECT * FROM "Niveles";            
+SELECT * FROM "Aulas";
+SELECT * FROM "Materias";
 
+
+\x off : para tabla bonito
+
+SELECT *
+FROM "Materias"
+WHERE "Codigo" = 'MAT-150';
 
 //DOCKER
 docker compose up -d --build servicioa
