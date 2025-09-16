@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos.response;
 using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
@@ -14,18 +16,26 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 [Authorize]
 public class MateriasController : ControllerBase
 {
-    private readonly ServicioAContext _context;
+    private readonly ServicioAContext _db;
+    private readonly QueueManager _qm;
+    private readonly ITransaccionStore _store;
+    private readonly IConfiguration _cfg;
 
-    public MateriasController(ServicioAContext context)
+    public MateriasController(ServicioAContext db, QueueManager qm, ITransaccionStore store, IConfiguration cfg)
     {
-        _context = context;
+        _db = db;
+        _qm = qm;
+        _store = store;
+        _cfg = cfg;
     }
+
+    // ===  ENDPOINTS SÍNCRONOS (LECTURA Y ESCRITURA DIRECTA) ===
     /*
     // GET: api/materias
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MateriaResponseDto>>> GetAll(CancellationToken ct = default)
     {
-        var materias = await _context.Materias
+        var materias = await _db.Materias
             .Include(m => m.Nivel) // Asegura que se cargue el Nivel asociado
             .AsNoTracking()
             .OrderBy(m => m.Codigo)
@@ -46,7 +56,7 @@ public class MateriasController : ControllerBase
         if (page <= 0 || pageSize <= 0)
             return BadRequest("Los parámetros de paginación deben ser mayores a cero.");
 
-        var query = _context.Materias
+        var query = _db.Materias
             .Include(m => m.Nivel)
             .AsNoTracking()
             .OrderBy(m => m.Codigo);
@@ -72,11 +82,12 @@ public class MateriasController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<MateriaRequestDto>> GetById(int id, CancellationToken ct = default)
     {
-        var materia = await _context.Materias
+        var materia = await _db.Materias
+            .Include(m => m.Nivel)
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == id, ct);
 
-        return materia is null ? NotFound() : Ok(ToDto(materia));
+        return materia is null ? NotFound() : Ok(ToResponseDto(materia));
     }
 
     // POST: api/materias
@@ -91,8 +102,8 @@ public class MateriasController : ControllerBase
             NivelId = dto.NivelId
         };
 
-        _context.Materias.Add(entity);
-        await _context.SaveChangesAsync(ct);
+        _db.Materias.Add(entity);
+        await _db.SaveChangesAsync(ct);
 
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
     }
@@ -101,7 +112,7 @@ public class MateriasController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] MateriaRequestDto dto, CancellationToken ct = default)
     {
-        var materia = await _context.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
+        var materia = await _db.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
         if (materia is null) return NotFound();
 
         materia.Codigo = dto.Codigo;
@@ -109,7 +120,7 @@ public class MateriasController : ControllerBase
         materia.Creditos = dto.Creditos;
         materia.NivelId = dto.NivelId;
 
-        await _context.SaveChangesAsync(ct);
+        await _db.SaveChangesAsync(ct);
         return NoContent();
     }
 
@@ -117,12 +128,107 @@ public class MateriasController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
-        var materia = await _context.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
+        var materia = await _db.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
         if (materia is null) return NotFound();
 
-        _context.Materias.Remove(materia);
-        await _context.SaveChangesAsync(ct);
+        _db.Materias.Remove(materia);
+        await _db.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    // ===  ENDPOINTS ASÍNCRONOS (ESCRITURA ENCOLADA) ===
+
+    // POST /api/materias/async
+    [HttpPost("async")]
+    public async Task<IActionResult> CrearMateriaAsync(
+        [FromBody] MateriaRequestDto materiaDto,
+        [FromQuery] string? queue = "default",
+        [FromQuery] int priority = 1,
+        [FromQuery] DateTimeOffset? notBeforeUtc = null,
+        CancellationToken ct = default)
+    {
+        var tx = new Transaccion
+        {
+            TipoOperacion = "POST",
+            Entidad = "Materia",
+            Payload = JsonSerializer.Serialize(materiaDto),
+            Estado = "EN_COLA",
+            Priority = Math.Clamp(priority, 0, 2),
+            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow
+        };
+        tx.CallbackUrl ??= _cfg["Webhook:DefaultUrl"];
+        tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
+        tx.IdempotencyKey ??= tx.Id.ToString();
+
+        await _qm.EnqueueAsync(tx, queue, ct);
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    // PUT /api/materias/async/{id}
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> ActualizarMateriaAsync(
+        int id,
+        [FromBody] MateriaRequestDto materiaDto,
+        [FromQuery] string? queue = "default",
+        [FromQuery] int priority = 1,
+        [FromQuery] DateTimeOffset? notBeforeUtc = null,
+        CancellationToken ct = default)
+    {
+        materiaDto.Id = id; // Aseguramos que el Id del DTO coincida con el de la ruta
+
+        var tx = new Transaccion
+        {
+            TipoOperacion = "PUT",
+            Entidad = "Materia",
+            Payload = JsonSerializer.Serialize(materiaDto),
+            Estado = "EN_COLA",
+            Priority = Math.Clamp(priority, 0, 2),
+            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow
+        };
+        tx.CallbackUrl ??= _cfg["Webhook:DefaultUrl"];
+        tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
+        tx.IdempotencyKey ??= tx.Id.ToString();
+
+        await _qm.EnqueueAsync(tx, queue, ct);
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    // DELETE /api/materias/async/{id}
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> EliminarMateriaAsync(
+        int id,
+        [FromQuery] string? queue = "default",
+        [FromQuery] int priority = 1,
+        [FromQuery] DateTimeOffset? notBeforeUtc = null,
+        CancellationToken ct = default)
+    {
+        var payload = new { Id = id };
+
+        var tx = new Transaccion
+        {
+            TipoOperacion = "DELETE",
+            Entidad = "Materia",
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA",
+            Priority = Math.Clamp(priority, 0, 2),
+            NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow
+        };
+        tx.CallbackUrl ??= _cfg["Webhook:DefaultUrl"];
+        tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
+        tx.IdempotencyKey ??= tx.Id.ToString();
+
+        await _qm.EnqueueAsync(tx, queue, ct);
+        return Accepted(new { id = tx.Id, estado = tx.Estado });
+    }
+
+    // GET /api/materias/estado/{id}
+    [HttpGet("estado/{id:guid}")]
+    public async Task<IActionResult> GetEstado(Guid id, CancellationToken ct = default)
+    {
+        var tx = await _store.GetAsync(id, ct);
+        return tx is null
+            ? NotFound(new { mensaje = "Transacción no encontrada" })
+            : Ok(new { id = tx.Id, estado = tx.Estado });
     }
 
     // Mapeo interno
@@ -142,7 +248,7 @@ public class MateriasController : ControllerBase
         Nombre = m.Nombre,
         Creditos = m.Creditos,
         Nivel = new NivelDto
-        {
+        { // El Nivel debe estar cargado (Include) para que esto no falle
             Id = m.Nivel.Id,
             Numero = m.Nivel.Numero,
             Nombre = m.Nivel.Nombre

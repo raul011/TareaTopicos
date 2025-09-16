@@ -12,7 +12,7 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20250901180340_InitialCreate")]
+    [Migration("20250915175850_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1610,6 +1610,9 @@ namespace ServicioA.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Numero")
+                        .IsUnique();
+
                     b.ToTable("Niveles");
 
                     b.HasData(
@@ -1985,6 +1988,20 @@ namespace ServicioA.Migrations
                             NotaMin = 51m,
                             Tipo = "OBLIGATORIO"
                         });
+                });
+
+            modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.ProcessedMessage", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MessageId");
+
+                    b.ToTable("ProcessedMessages");
                 });
 
             modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.DetalleInscripcion", b =>

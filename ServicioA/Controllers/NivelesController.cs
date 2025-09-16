@@ -23,7 +23,9 @@ public class NivelesController : ControllerBase
         _db = db;
         _cfg = cfg;
     }
-
+    
+    // ===  ENDPOINTS ASÍNCRONAS  ===
+    
     // POST /api/niveles/async
     [HttpPost("async")]
     public async Task<IActionResult> CrearNivelAsync(

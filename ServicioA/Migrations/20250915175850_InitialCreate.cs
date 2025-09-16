@@ -104,6 +104,18 @@ namespace ServicioA.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ProcessedMessages",
+                columns: table => new
+                {
+                    MessageId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProcessedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProcessedMessages", x => x.MessageId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Estudiantes",
                 columns: table => new
                 {
@@ -700,6 +712,12 @@ namespace ServicioA.Migrations
                 column: "NivelId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Niveles_Numero",
+                table: "Niveles",
+                column: "Numero",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PlanesEstudio_CarreraId",
                 table: "PlanesEstudio",
                 column: "CarreraId");
@@ -738,6 +756,9 @@ namespace ServicioA.Migrations
 
             migrationBuilder.DropTable(
                 name: "Prerequisitos");
+
+            migrationBuilder.DropTable(
+                name: "ProcessedMessages");
 
             migrationBuilder.DropTable(
                 name: "DetallesInscripciones");
