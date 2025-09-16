@@ -4,6 +4,8 @@ using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos.request;
 using Microsoft.AspNetCore.Authorization;
+using TAREATOPICOS.ServicioA.Services;
+using System.Text.Json;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
@@ -13,7 +15,15 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 public class PeriodosAcademicosController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public PeriodosAcademicosController(ServicioAContext context) => _context = context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
+
+    public PeriodosAcademicosController(ServicioAContext context, IBackgroundTaskQueue queue, ITransaccionStore store)
+    {
+        _context = context;
+        _queue = queue;
+        _store = store;
+    }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PeriodoAcademicoRequestDto>>> GetAll(CancellationToken ct)
@@ -62,6 +72,48 @@ public class PeriodosAcademicosController : ControllerBase
         _context.PeriodosAcademicos.Remove(p);
         await _context.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    #region Endpoints Asíncronos
+    // POST: api/periodosacademicos/async
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] PeriodoAcademicoRequestDto dto, CancellationToken ct)
+    {
+        dto.Id = 0;
+        return await EnqueueTransaction("CREATE", dto, ct);
+    }
+
+    // PUT: api/periodosacademicos/async/{id}
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] PeriodoAcademicoRequestDto dto, CancellationToken ct)
+    {
+        dto.Id = id;
+        return await EnqueueTransaction("UPDATE", dto, ct);
+    }
+
+    // DELETE: api/periodosacademicos/async/{id}
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
+    {
+        var dto = new PeriodoAcademicoRequestDto { Id = id };
+        return await EnqueueTransaction("DELETE", dto, ct);
+    }
+    #endregion
+
+    private async Task<IActionResult> EnqueueTransaction(string operation, object payload, CancellationToken ct)
+    {
+        var tx = new Transaccion
+        {
+            Id = Guid.NewGuid(),
+            Entidad = "PeriodoAcademico",
+            TipoOperacion = operation,
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA",
+            NotBefore = DateTimeOffset.UtcNow
+        };
+        await _store.AddAsync(tx, ct);
+        await _queue.EnqueueAsync(tx, "default", ct);
+        return AcceptedAtAction(nameof(TransaccionesController.Get), "Transacciones", new { id = tx.Id }, new { transaccionId = tx.Id, estado = tx.Estado });
     }
 
     private static PeriodoAcademicoRequestDto ToDTO(PeriodoAcademico p) => new()

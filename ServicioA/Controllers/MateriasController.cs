@@ -6,6 +6,8 @@ using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos.response;
 using TAREATOPICOS.ServicioA.Dtos;
 using Microsoft.AspNetCore.Authorization;
+using TAREATOPICOS.ServicioA.Services;
+using System.Text.Json;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
@@ -15,10 +17,16 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 public class MateriasController : ControllerBase
 {
     private readonly ServicioAContext _context;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
 
-    public MateriasController(ServicioAContext context)
+
+    public MateriasController(ServicioAContext context, IBackgroundTaskQueue queue, ITransaccionStore store)
     {
         _context = context;
+        _queue = queue;
+        _store = store;
+
     }
     /*
     // GET: api/materias
@@ -128,6 +136,52 @@ public class MateriasController : ControllerBase
         await _context.SaveChangesAsync(ct);
         return NoContent();
     }
+
+    #region Endpoints Asíncronos
+    // POST: api/materias/async
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] MateriaRequestDto dto, CancellationToken ct)
+    {
+        dto.Id = 0;
+        return await EnqueueTransaction("CREATE", dto, ct);
+    }
+
+    // PUT: api/materias/async/{id}
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] MateriaRequestDto dto, CancellationToken ct)
+    {
+        dto.Id = id;
+        return await EnqueueTransaction("UPDATE", dto, ct);
+    }
+
+    // DELETE: api/materias/async/{id}
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
+    {
+        var dto = new MateriaRequestDto { Id = id };
+        return await EnqueueTransaction("DELETE", dto, ct);
+    }
+    #endregion
+
+    #region Métodos Privados
+    private async Task<IActionResult> EnqueueTransaction(string operation, object payload, CancellationToken ct)
+    {
+        var tx = new Transaccion
+        {
+            Id = Guid.NewGuid(),
+            Entidad = "Materia",
+            TipoOperacion = operation,
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA",
+            NotBefore = DateTimeOffset.UtcNow
+        };
+
+        await _store.AddAsync(tx, ct);
+        await _queue.EnqueueAsync(tx, "default", ct);
+
+        return AcceptedAtAction(nameof(TransaccionesController.Get), "Transacciones", new { id = tx.Id }, new { transaccionId = tx.Id, estado = tx.Estado });
+    }
+    #endregion
 
     // Mapeo interno
     private static MateriaRequestDto ToDto(Materia m) => new()

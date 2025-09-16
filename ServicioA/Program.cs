@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -7,15 +6,10 @@ using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Extensions;
 using TAREATOPICOS.ServicioA.Services.Seeders;
 using TAREATOPICOS.ServicioA.Services.Processors;
-using TAREATOPICOS.ServicioA.Services; 
+using TAREATOPICOS.ServicioA.Services;
 
 using Polly;
 using Polly.Extensions.Http;
-using System.Net;
-
-
-
-
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -77,6 +71,12 @@ builder.Services.AddScoped<IProcessor, PlanDeEstudioProcessor>();
 
 builder.Services.AddScoped<GrupoMateriaProcessor>();
 builder.Services.AddScoped<IProcessor, GrupoMateriaProcessor>();
+
+builder.Services.AddScoped<PeriodoAcademicoProcessor>();
+builder.Services.AddScoped<IProcessor, PeriodoAcademicoProcessor>();
+
+builder.Services.AddScoped<AulaProcessor>();
+builder.Services.AddScoped<IProcessor, AulaProcessor>();
 
 builder.Services.AddScoped<EstudianteProcessor>();
 builder.Services.AddScoped<IProcessor, EstudianteProcessor>();

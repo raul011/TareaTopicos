@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
-using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Dtos.request; // <-- ¡Esta es la línea que faltaba!
 
 namespace TAREATOPICOS.ServicioA.Services.Processors
 {
@@ -55,7 +55,6 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                         _logger.LogWarning("No se encontró Estudiante con Id {Id} para actualizar.", dto.Id);
                         return;
                     }
-                    estudianteToUpdate.Registro = dto.Registro;
                     estudianteToUpdate.Ci = dto.Ci;
                     estudianteToUpdate.Nombre = dto.Nombre;
                     estudianteToUpdate.Email = dto.Email;
@@ -63,7 +62,6 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                     estudianteToUpdate.Direccion = dto.Direccion;
                     estudianteToUpdate.Estado = dto.Estado;
                     estudianteToUpdate.CarreraId = dto.CarreraId;
-
                     if (!string.IsNullOrEmpty(dto.Password))
                     {
                         estudianteToUpdate.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);

@@ -36,6 +36,9 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
             RegisterProcessor<MateriaProcessor>(processors, "Materia");
             RegisterProcessor<PlanDeEstudioProcessor>(processors, "PlanDeEstudio");
             RegisterProcessor<GrupoMateriaProcessor>(processors, "GrupoMateria");
+            RegisterProcessor<EstudianteProcessor>(processors, "Estudiante");
+            RegisterProcessor<PeriodoAcademicoProcessor>(processors, "PeriodoAcademico");
+            RegisterProcessor<AulaProcessor>(processors, "Aula");
         }
 
         public async Task ProcessAsync(Transaccion tx, CancellationToken ct)

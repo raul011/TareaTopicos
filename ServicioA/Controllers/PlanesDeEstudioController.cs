@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore; // Asegurarse que este using esté presente
 using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos.request;
@@ -87,38 +87,38 @@ public class PlanesDeEstudioController : ControllerBase
         await _context.SaveChangesAsync(ct);
         return NoContent();
     }
-    
+
     // GET api/planesdeestudio/{id}/materias
-[HttpGet("{id:int}/materias")]
-public async Task<ActionResult<IEnumerable<MateriaRequestDto>>> GetMateriasDePlan(int id, CancellationToken ct = default)
-{
-    // 1. Validar existencia del plan
-    var existePlan = await _context.PlanesEstudio
-        .AsNoTracking()
-        .AnyAsync(p => p.Id == id, ct);
+    [HttpGet("{id:int}/materias")]
+    public async Task<ActionResult<IEnumerable<MateriaRequestDto>>> GetMateriasDePlan(int id, CancellationToken ct = default)
+    {
+        // 1. Validar existencia del plan
+        var existePlan = await _context.PlanesEstudio
+            .AsNoTracking()
+            .AnyAsync(p => p.Id == id, ct);
 
-    if (!existePlan)
-        return NotFound($"No existe un PlanDeEstudio con Id={id}");
+        if (!existePlan)
+            return NotFound($"No existe un PlanDeEstudio con Id={id}");
 
-    // 2. Consultar materias asociadas al plan
-    var materias = await _context.PlanMaterias
-        .AsNoTracking()
-        .Where(pm => pm.PlanId == id)
-        .Include(pm => pm.Materia) // Incluimos datos de Materia
-        .Select(pm => new MateriaRequestDto
-        {
-            Id = pm.Materia.Id,
-            Codigo = pm.Materia.Codigo,
-            Nombre = pm.Materia.Nombre,
-            Creditos = pm.Materia.Creditos,
-            NivelId = pm.Materia.NivelId
-        })
-        .OrderBy(m => m.Nombre)
-        .ToListAsync(ct);
+        // 2. Consultar materias asociadas al plan
+        var materias = await _context.PlanMaterias
+            .AsNoTracking()
+            .Where(pm => pm.PlanId == id)
+            .Include(pm => pm.Materia) // Incluimos datos de Materia
+            .Select(pm => new MateriaRequestDto
+            {
+                Id = pm.Materia.Id,
+                Codigo = pm.Materia.Codigo,
+                Nombre = pm.Materia.Nombre,
+                Creditos = pm.Materia.Creditos,
+                NivelId = pm.Materia.NivelId
+            })
+            .OrderBy(m => m.Nombre)
+            .ToListAsync(ct);
 
-    // 3. Retornar resultado
-    return Ok(materias);
-}
+        // 3. Retornar resultado
+        return Ok(materias);
+    }
 
     #region Endpoints Asíncronos
     // POST: api/planesdeestudio/async

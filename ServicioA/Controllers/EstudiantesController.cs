@@ -8,6 +8,8 @@ using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos;
+using TAREATOPICOS.ServicioA.Services;
+using System.Text.Json;
 
 using TAREATOPICOS.ServicioA.Dtos.response;
 using Microsoft.AspNetCore.Authorization;
@@ -21,16 +23,22 @@ public class EstudiantesController : ControllerBase
 {
     private readonly ServicioAContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IBackgroundTaskQueue _queue;
+    private readonly ITransaccionStore _store;
 
-    public EstudiantesController(ServicioAContext context, IConfiguration configuration)
+
+    public EstudiantesController(ServicioAContext context, IConfiguration configuration, IBackgroundTaskQueue queue, ITransaccionStore store)
     {
         _context = context;
         _configuration = configuration;
+        _queue = queue;
+        _store = store;
+
     }
 
     // --------- CRUD ------------------
     [HttpGet]
-   public async Task<ActionResult<IEnumerable<EstudianteResponseDto>>> GetAll(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<EstudianteResponseDto>>> GetAll(CancellationToken ct)
     {
         var list = await _context.Estudiantes
             .AsNoTracking()
@@ -46,6 +54,7 @@ public class EstudiantesController : ControllerBase
         return e is null ? NotFound() : Ok(ToDTO(e));
     }
 
+    [AllowAnonymous] // <-- Añade esta línea temporalmente
     [HttpPost]
     public async Task<ActionResult<EstudianteRequestDto>> Create([FromBody] EstudianteRequestDto dto, CancellationToken ct)
     {
@@ -111,40 +120,40 @@ public class EstudiantesController : ControllerBase
     // ========== LOGIN ==========
     [AllowAnonymous]
     [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginDto login)
+    public IActionResult Login([FromBody] LoginDto login)
+    {
+        var estudiante = _context.Estudiantes
+            .FirstOrDefault(e => e.Registro == login.Registro);
+
+        if (estudiante == null || !BCrypt.Net.BCrypt.Verify(login.Password, estudiante.PasswordHash))
         {
-            var estudiante = _context.Estudiantes
-                .FirstOrDefault(e => e.Registro == login.Registro);
+            return Unauthorized("Registro o contraseña inválidos ❌");
+        }
 
-            if (estudiante == null || !BCrypt.Net.BCrypt.Verify(login.Password, estudiante.PasswordHash))
+        var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
+        var tokenHandler = new JwtSecurityTokenHandler();
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
             {
-                return Unauthorized("Registro o contraseña inválidos ❌");
-            }
-
-            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
-            var tokenHandler = new JwtSecurityTokenHandler();
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
                     new Claim("Registro", estudiante.Registro),
                     new Claim("Nombre", estudiante.Nombre)
                 }),
-                Expires = DateTime.UtcNow.AddHours(2),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature
-                ),
-                Issuer = _configuration["Jwt:Issuer"],
-                Audience = _configuration["Jwt:Audience"]
-            };
+            Expires = DateTime.UtcNow.AddHours(2),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature
+            ),
+            Issuer = _configuration["Jwt:Issuer"],
+            Audience = _configuration["Jwt:Audience"]
+        };
 
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var jwt = tokenHandler.WriteToken(token);
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var jwt = tokenHandler.WriteToken(token);
 
-            return Ok(new { token = jwt });
-        }
+        return Ok(new { token = jwt });
+    }
 
     #region Endpoints Asíncronos
     // POST: api/estudiantes/async
@@ -171,6 +180,7 @@ public class EstudiantesController : ControllerBase
         return await EnqueueTransaction("DELETE", dto, ct);
     }
     #endregion
+
 
     #region Métodos Privados
     private async Task<IActionResult> EnqueueTransaction(string operation, object payload, CancellationToken ct)
