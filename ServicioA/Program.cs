@@ -59,13 +59,30 @@ builder.Services.AddSwaggerGen();
 // Program.cs (solo la parte de DI relevante a processors/queues)
 
 // Processors concretos
-builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.NivelProcessor>();
-builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
-                           TAREATOPICOS.ServicioA.Services.Processors.NivelProcessor>();
+builder.Services.AddScoped<NivelProcessor>();
+builder.Services.AddScoped<IProcessor, NivelProcessor>();
+
+// --- REGISTRO DE NUEVOS PROCESADORES ---
+builder.Services.AddScoped<InscripcionProcessor>();
+builder.Services.AddScoped<IProcessor, InscripcionProcessor>();
+
+builder.Services.AddScoped<DocenteProcessor>();
+builder.Services.AddScoped<IProcessor, DocenteProcessor>();
+
+builder.Services.AddScoped<MateriaProcessor>();
+builder.Services.AddScoped<IProcessor, MateriaProcessor>();
+
+builder.Services.AddScoped<PlanDeEstudioProcessor>();
+builder.Services.AddScoped<IProcessor, PlanDeEstudioProcessor>();
+
+builder.Services.AddScoped<GrupoMateriaProcessor>();
+builder.Services.AddScoped<IProcessor, GrupoMateriaProcessor>();
+
+builder.Services.AddScoped<EstudianteProcessor>();
+builder.Services.AddScoped<IProcessor, EstudianteProcessor>();
 
 // Router (IQueueProcessor) → DefaultProcessor
-builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IQueueProcessor,
-                           TAREATOPICOS.ServicioA.Services.Processors.DefaultProcessor>();
+builder.Services.AddScoped<IQueueProcessor, DefaultProcessor>();
 
 // ... resto de tus servicios
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.IIdempotencyGuard,

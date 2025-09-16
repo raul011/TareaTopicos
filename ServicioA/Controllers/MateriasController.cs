@@ -69,12 +69,12 @@ public class MateriasController : ControllerBase
     }
 
     // GET: api/materias/{id}
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<MateriaRequestDto>> GetById(int id, CancellationToken ct = default)
+    [HttpGet("{codigo}")]
+    public async Task<ActionResult<MateriaRequestDto>> GetByCodigo(string codigo, CancellationToken ct = default)
     {
         var materia = await _context.Materias
             .AsNoTracking()
-            .FirstOrDefaultAsync(m => m.Id == id, ct);
+            .FirstOrDefaultAsync(m => m.Codigo == codigo, ct);
 
         return materia is null ? NotFound() : Ok(ToDto(materia));
     }
@@ -83,6 +83,10 @@ public class MateriasController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<MateriaRequestDto>> Create([FromBody] MateriaRequestDto dto, CancellationToken ct = default)
     {
+        // Validación: Asegurar que el código de la materia sea único.
+        if (await _context.Materias.AnyAsync(m => m.Codigo == dto.Codigo, ct))
+            return Conflict($"Ya existe una materia con el código '{dto.Codigo}'.");
+
         var entity = new Materia
         {
             Codigo = dto.Codigo,
@@ -94,30 +98,30 @@ public class MateriasController : ControllerBase
         _context.Materias.Add(entity);
         await _context.SaveChangesAsync(ct);
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, ToDto(entity));
+        return CreatedAtAction(nameof(GetByCodigo), new { codigo = entity.Codigo }, ToDto(entity));
     }
 
     // PUT: api/materias/{id}
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] MateriaRequestDto dto, CancellationToken ct = default)
+    [HttpPut("{codigo}")]
+    public async Task<IActionResult> Update(string codigo, [FromBody] MateriaRequestDto dto, CancellationToken ct = default)
     {
-        var materia = await _context.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
+        var materia = await _context.Materias.FirstOrDefaultAsync(m => m.Codigo == codigo, ct);
         if (materia is null) return NotFound();
 
-        materia.Codigo = dto.Codigo;
         materia.Nombre = dto.Nombre;
         materia.Creditos = dto.Creditos;
         materia.NivelId = dto.NivelId;
+        // El código de la materia no debería cambiar, ya que es su identificador natural.
 
         await _context.SaveChangesAsync(ct);
         return NoContent();
     }
 
     // DELETE: api/materias/{id}
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
+    [HttpDelete("{codigo}")]
+    public async Task<IActionResult> Delete(string codigo, CancellationToken ct = default)
     {
-        var materia = await _context.Materias.FirstOrDefaultAsync(m => m.Id == id, ct);
+        var materia = await _context.Materias.FirstOrDefaultAsync(m => m.Codigo == codigo, ct);
         if (materia is null) return NotFound();
 
         _context.Materias.Remove(materia);

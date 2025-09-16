@@ -39,17 +39,22 @@ public class EstudiantesController : ControllerBase
         return Ok(list.Select(ToResponseDTO));
     }
 
-
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<EstudianteRequestDto>> Get(int id, CancellationToken ct)
+    [HttpGet("{registro}")]
+    public async Task<ActionResult<EstudianteRequestDto>> Get(string registro, CancellationToken ct)
     {
-        var e = await _context.Estudiantes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        var e = await _context.Estudiantes.AsNoTracking().FirstOrDefaultAsync(x => x.Registro == registro, ct);
         return e is null ? NotFound() : Ok(ToDTO(e));
     }
 
     [HttpPost]
     public async Task<ActionResult<EstudianteRequestDto>> Create([FromBody] EstudianteRequestDto dto, CancellationToken ct)
     {
+        // Validación: Asegurar que el registro y el email del estudiante sean únicos.
+        if (await _context.Estudiantes.AnyAsync(e => e.Registro == dto.Registro, ct))
+            return Conflict($"Ya existe un estudiante con el registro '{dto.Registro}'.");
+        if (await _context.Estudiantes.AnyAsync(e => e.Email == dto.Email, ct))
+            return Conflict($"Ya existe un estudiante con el email '{dto.Email}'.");
+
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password); //  Hash de contraseña
 
         var e = new Estudiante
@@ -66,16 +71,15 @@ public class EstudiantesController : ControllerBase
         };
         _context.Estudiantes.Add(e);
         await _context.SaveChangesAsync(ct);
-        return CreatedAtAction(nameof(Get), new { id = e.Id }, ToDTO(e));
+        return CreatedAtAction(nameof(Get), new { registro = e.Registro }, ToDTO(e));
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] EstudianteRequestDto dto, CancellationToken ct)
+    [HttpPut("{registro}")]
+    public async Task<IActionResult> Update(string registro, [FromBody] EstudianteRequestDto dto, CancellationToken ct)
     {
-        var e = await _context.Estudiantes.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var e = await _context.Estudiantes.FirstOrDefaultAsync(x => x.Registro == registro, ct);
         if (e is null) return NotFound();
 
-        e.Registro = dto.Registro;
         e.Ci = dto.Ci;
         e.Nombre = dto.Nombre;
         e.Email = dto.Email;
@@ -83,6 +87,7 @@ public class EstudiantesController : ControllerBase
         e.Direccion = dto.Direccion;
         e.Estado = dto.Estado;
         e.CarreraId = dto.CarreraId;
+        // El registro del estudiante no debería cambiar.
 
         if (!string.IsNullOrEmpty(dto.Password))
         {
@@ -93,10 +98,10 @@ public class EstudiantesController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpDelete("{registro}")]
+    public async Task<IActionResult> Delete(string registro, CancellationToken ct)
     {
-        var e = await _context.Estudiantes.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var e = await _context.Estudiantes.FirstOrDefaultAsync(x => x.Registro == registro, ct);
         if (e is null) return NotFound();
         _context.Estudiantes.Remove(e);
         await _context.SaveChangesAsync(ct);
@@ -104,6 +109,7 @@ public class EstudiantesController : ControllerBase
     }
 
     // ========== LOGIN ==========
+    [AllowAnonymous]
     [HttpPost("login")]
         public IActionResult Login([FromBody] LoginDto login)
         {
@@ -139,6 +145,53 @@ public class EstudiantesController : ControllerBase
 
             return Ok(new { token = jwt });
         }
+
+    #region Endpoints Asíncronos
+    // POST: api/estudiantes/async
+    [HttpPost("async")]
+    public async Task<IActionResult> CreateAsync([FromBody] EstudianteRequestDto dto, CancellationToken ct)
+    {
+        dto.Id = 0;
+        return await EnqueueTransaction("CREATE", dto, ct);
+    }
+
+    // PUT: api/estudiantes/async/{id}
+    [HttpPut("async/{id:int}")]
+    public async Task<IActionResult> UpdateAsync(int id, [FromBody] EstudianteRequestDto dto, CancellationToken ct)
+    {
+        dto.Id = id;
+        return await EnqueueTransaction("UPDATE", dto, ct);
+    }
+
+    // DELETE: api/estudiantes/async/{id}
+    [HttpDelete("async/{id:int}")]
+    public async Task<IActionResult> DeleteAsync(int id, CancellationToken ct)
+    {
+        var dto = new EstudianteRequestDto { Id = id };
+        return await EnqueueTransaction("DELETE", dto, ct);
+    }
+    #endregion
+
+    #region Métodos Privados
+    private async Task<IActionResult> EnqueueTransaction(string operation, object payload, CancellationToken ct)
+    {
+        var tx = new Transaccion
+        {
+            Id = Guid.NewGuid(),
+            Entidad = "Estudiante",
+            TipoOperacion = operation,
+            Payload = JsonSerializer.Serialize(payload),
+            Estado = "EN_COLA",
+            NotBefore = DateTimeOffset.UtcNow
+        };
+
+        await _store.AddAsync(tx, ct);
+        await _queue.EnqueueAsync(tx, "default", ct);
+
+        return AcceptedAtAction(nameof(TransaccionesController.Get), "Transacciones", new { id = tx.Id }, new { transaccionId = tx.Id, estado = tx.Estado });
+    }
+
+    #endregion
 
 
     // ====== Mapper ======

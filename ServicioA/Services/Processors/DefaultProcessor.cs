@@ -28,8 +28,14 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
             if (nivelProc is not null)
                 _map["Nivel"] = nivelProc;
 
-            // Si necesitas más entidades, registra aquí:
-            // _map["OtraEntidad"] = processors.First(p => p is OtraEntidadProcessor);
+            var inscripcionProc = processors.FirstOrDefault(p => p.GetType().Name.Contains("InscripcionProcessor", StringComparison.OrdinalIgnoreCase));
+            if (inscripcionProc is not null)
+                _map["Inscripcion"] = inscripcionProc;
+
+            RegisterProcessor<DocenteProcessor>(processors, "Docente");
+            RegisterProcessor<MateriaProcessor>(processors, "Materia");
+            RegisterProcessor<PlanDeEstudioProcessor>(processors, "PlanDeEstudio");
+            RegisterProcessor<GrupoMateriaProcessor>(processors, "GrupoMateria");
         }
 
         public async Task ProcessAsync(Transaccion tx, CancellationToken ct)
@@ -48,6 +54,13 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
 
             // Delegar en el processor específico (él discrimina por TipoOperacion).
             await handler.ProcessAsync(tx, ct);
+        }
+
+        private void RegisterProcessor<T>(IEnumerable<IProcessor> processors, string entityName) where T : IProcessor
+        {
+            var processor = processors.FirstOrDefault(p => p is T);
+            if (processor is not null)
+                _map[entityName] = processor;
         }
     }
 }
