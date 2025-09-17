@@ -93,6 +93,11 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.PlanDeEstu
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.PlanDeEstudioProcessor>();  
 
+/*
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
+                           TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();                             
+*/
 // Router (IQueueProcessor) → DefaultProcessor
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IQueueProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.DefaultProcessor>();
@@ -186,4 +191,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-app.Run();
+//app.Run();
+app.Run("http://0.0.0.0:5000"); // Escucha en todas las interfaces de red
+

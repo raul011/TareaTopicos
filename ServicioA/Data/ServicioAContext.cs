@@ -108,6 +108,9 @@ namespace TAREATOPICOS.ServicioA.Data
             modelBuilder.Entity<PeriodoAcademico>()
               .HasIndex(m => m.Gestion)
               .IsUnique();
+            modelBuilder.Entity<PlanDeEstudio>()
+              .HasIndex(m => m.Codigo)
+              .IsUnique();
 
             // Seeders opcionales
             TAREATOPICOS.ServicioA.Data.Seeders.NivelSeeder.Seed(modelBuilder);
