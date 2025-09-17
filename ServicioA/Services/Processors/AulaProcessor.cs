@@ -24,6 +24,7 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
         {
             _logger.LogInformation("🔄 Procesando Tx {TxId} tipo {Tipo}", tx.Id, tx.TipoOperacion);
 
+            // Idempotencia
             if (await _guard.IsProcessedAsync(tx.Id, ct))
             {
                 _logger.LogInformation("🟡 Tx {TxId} ya fue procesada (idempotente)", tx.Id);
@@ -46,8 +47,22 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                                 return;
                             }
 
+                            if (string.IsNullOrWhiteSpace(aula.Codigo))
+                            {
+                                Skip(tx, "POST/Aula requiere Codigo");
+                                return;
+                            }
+
+                            var existe = await _db.Aulas.AsNoTracking().AnyAsync(x => x.Codigo == aula.Codigo, ct);
+                            if (existe)
+                            {
+                                Skip(tx, $"Aula con Codigo {aula.Codigo} ya existe");
+                                return;
+                            }
+
                             aula.Id = 0;
                             _db.Aulas.Add(aula);
+                            _logger.LogInformation("💾 Guardando cambios para Tx {TxId}", tx.Id);
                             await _db.SaveChangesAsync(ct);
 
                             await _guard.MarkProcessedAsync(tx.Id, ct);
@@ -58,24 +73,24 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                     case "PUT":
                         {
                             var aula = tx.Payload is null ? null : JsonSerializer.Deserialize<Aula>(tx.Payload, opts);
-                            if (aula is null || aula.Id <= 0)
+                            if (aula is null || string.IsNullOrWhiteSpace(aula.Codigo))
                             {
                                 Skip(tx, "Payload inválido para PUT/Aula");
                                 return;
                             }
 
-                            var existente = await _db.Aulas.FirstOrDefaultAsync(x => x.Id == aula.Id, ct);
+                            var existente = await _db.Aulas.FirstOrDefaultAsync(x => x.Codigo == aula.Codigo, ct);
                             if (existente is null)
                             {
-                                Skip(tx, $"Aula {aula.Id} no existe");
+                                Skip(tx, $"Aula con Codigo {aula.Codigo} no existe");
                                 return;
                             }
 
-                            existente.Codigo = aula.Codigo;
                             existente.Capacidad = aula.Capacidad;
                             existente.Ubicacion = aula.Ubicacion;
-
+                            _logger.LogInformation("💾 Guardando cambios para Tx {TxId}", tx.Id);
                             await _db.SaveChangesAsync(ct);
+
                             await _guard.MarkProcessedAsync(tx.Id, ct);
                             tx.Estado = "COMPLETADO";
                             return;
@@ -83,22 +98,23 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
 
                     case "DELETE":
                         {
-                            if (!TryGetId(tx.Payload ?? string.Empty, out var id) || id <= 0)
+                            if (!TryGetCodigo(tx.Payload ?? string.Empty, out var codigo) || string.IsNullOrWhiteSpace(codigo))
                             {
-                                Skip(tx, "DELETE/Aula requiere Id (>0)");
+                                Skip(tx, "DELETE/Aula requiere Codigo válido");
                                 return;
                             }
 
-                            var entity = await _db.Aulas.FirstOrDefaultAsync(x => x.Id == id, ct);
+                            var entity = await _db.Aulas.FirstOrDefaultAsync(x => x.Codigo == codigo, ct);
                             if (entity is null)
                             {
-                                Skip(tx, $"Aula {id} no existe");
+                                Skip(tx, $"Aula con Codigo {codigo} no existe");
                                 return;
                             }
 
                             try
                             {
                                 _db.Aulas.Remove(entity);
+                                _logger.LogInformation("💾 Guardando cambios para Tx {TxId}", tx.Id);
                                 await _db.SaveChangesAsync(ct);
 
                                 await _guard.MarkProcessedAsync(tx.Id, ct);
@@ -109,7 +125,7 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                                         .Contains("foreign key", StringComparison.OrdinalIgnoreCase))
                             {
                                 _logger.LogError(ex, "💥 Error de FK en Tx {TxId}: {Msg}", tx.Id, ex.Message);
-                                Skip(tx, $"No se puede eliminar Aula {id}: tiene dependencias (FK).");
+                                Skip(tx, $"No se puede eliminar Aula {codigo}: tiene dependencias (FK).");
                                 return;
                             }
                         }
@@ -130,20 +146,21 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
             }
         }
 
-        private static bool TryGetId(string payload, out int id)
+        private static bool TryGetCodigo(string payload, out string codigo)
         {
-            id = 0;
-
-            if (int.TryParse(payload.Trim('"'), out id)) return true;
+            codigo = string.Empty;
 
             try
             {
                 using var doc = JsonDocument.Parse(payload);
                 if (doc.RootElement.ValueKind == JsonValueKind.Object &&
-                    doc.RootElement.TryGetProperty("Id", out var idProp))
+                    doc.RootElement.TryGetProperty("Codigo", out var codProp))
                 {
-                    if (idProp.ValueKind == JsonValueKind.Number && idProp.TryGetInt32(out id)) return true;
-                    if (idProp.ValueKind == JsonValueKind.String && int.TryParse(idProp.GetString(), out id)) return true;
+                    if (codProp.ValueKind == JsonValueKind.String)
+                    {
+                        codigo = codProp.GetString() ?? string.Empty;
+                        return !string.IsNullOrWhiteSpace(codigo);
+                    }
                 }
             }
             catch { }

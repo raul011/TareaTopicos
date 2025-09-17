@@ -43,6 +43,9 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                     _map["PlanDeEstudio"] = processor;  
                 else if (typeName.Contains("GrupoMateriaProcessor", StringComparison.OrdinalIgnoreCase))
                     _map["GrupoMateria"] = processor;           
+                else if (typeName.Contains("DetalleInscripcionProcessor", StringComparison.OrdinalIgnoreCase))
+                  _map["DetalleInscripcion"] = processor;
+   
                 // Agrega más 'else if' para futuras entidades aquí.
             }
         }

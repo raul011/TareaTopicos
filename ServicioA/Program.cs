@@ -112,6 +112,20 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.IIdempotencyGuard,
 // {
 //     c.Timeout = TimeSpan.FromSeconds(5);
 // });
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.DetalleInscripcionProcessor>();
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
+                           TAREATOPICOS.ServicioA.Services.Processors.DetalleInscripcionProcessor>();
+
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+// Processor para DetalleInscripcion (POST/PUT/DELETE)
+
+
 
 
 builder.Services.AddScoped<ITransaccionStore, RedisTransaccionStore>(); // tu store real

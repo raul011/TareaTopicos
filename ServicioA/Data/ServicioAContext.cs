@@ -112,6 +112,11 @@ namespace TAREATOPICOS.ServicioA.Data
               .HasIndex(m => m.Codigo)
               .IsUnique();
 
+
+
+
+
+
             // Seeders opcionales
             TAREATOPICOS.ServicioA.Data.Seeders.NivelSeeder.Seed(modelBuilder);
             TAREATOPICOS.ServicioA.Data.Seeders.MateriaSeeder.Seed(modelBuilder);
