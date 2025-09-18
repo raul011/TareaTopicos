@@ -9,6 +9,8 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
 {
     public sealed class NivelProcessor : IProcessor, IQueueProcessor
     {
+        public string Entidad => "Nivel";
+
         private readonly ServicioAContext _db;
         private readonly IIdempotencyGuard _guard;
         private readonly ILogger<NivelProcessor> _logger;

@@ -26,7 +26,17 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
             // Itera sobre todos los procesadores inyectados y los mapea por su nombre de entidad.
             foreach (var processor in processors)
             {
+
+
+                
                 var typeName = processor.GetType().Name;
+                 _logger.LogInformation("🔍 Processor detectado: {TypeName}", typeName);
+                 _logger.LogInformation("🧪 Revisando nombre de clase: {TypeName}", typeName);
+
+
+                
+                
+
                 if (typeName.Contains("NivelProcessor", StringComparison.OrdinalIgnoreCase))
                     _map["Nivel"] = processor;
                 else if (typeName.Contains("MateriaProcessor", StringComparison.OrdinalIgnoreCase))
@@ -40,18 +50,25 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                 else if (typeName.Contains("PeriodoAcademicoProcessor", StringComparison.OrdinalIgnoreCase))
                     _map["PeriodoAcademico"] = processor; 
                 else if (typeName.Contains("PlanDeEstudioProcessor", StringComparison.OrdinalIgnoreCase))
-                    _map["PlanDeEstudio"] = processor;  
-                else if (typeName.Contains("GrupoMateriaProcessor", StringComparison.OrdinalIgnoreCase))
-                    _map["GrupoMateria"] = processor;           
+                    _map["PlanDeEstudio"] = processor;
+
+//                else if (typeName.Contains("GrupoMateriaProcessor", StringComparison.OrdinalIgnoreCase))
+//                    _map["GrupoMateria"] = processor;  
+                else if (typeName.Contains("GrupoMateriaProcessor", StringComparison.OrdinalIgnoreCase) && !_map.ContainsKey("GrupoMateria"))
+                    _map["GrupoMateria"] = processor;    
+
                 else if (typeName.Contains("DetalleInscripcionProcessor", StringComparison.OrdinalIgnoreCase))
-                  _map["DetalleInscripcion"] = processor;
+                    _map["DetalleInscripcion"] = processor;
    
                 // Agrega más 'else if' para futuras entidades aquí.
             }
+            _map["GrupoMateria"] = processors.First(p => p.GetType().Name.Contains("GrupoMateriaProcessor"));
+           // _logger.LogInformation("✅ Mapeo forzado: GrupoMateriaProcessor asignado a GrupoMateria");
         }
 
         public async Task ProcessAsync(Transaccion tx, CancellationToken ct)
         {
+            _logger.LogInformation("📨 Procesando transacción: Entidad={Entidad}, Tipo={Tipo}", tx.Entidad, tx.TipoOperacion);
             // Valida entrada
             if (string.IsNullOrWhiteSpace(tx.Entidad))
                 throw new InvalidOperationException("Transaccion sin Entidad");
