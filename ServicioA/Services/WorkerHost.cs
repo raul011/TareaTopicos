@@ -51,17 +51,14 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
 
     private WorkerService CreateWorker(string queueName)
     {
-        // Cada worker obtiene sus deps desde el scope
-        var scope = _sp.CreateScope();
-        var sp = scope.ServiceProvider;
-
-        var qm      = sp.GetRequiredService<QueueManager>();
-        var store   = sp.GetRequiredService<ITransaccionStore>();
-        var proc    = sp.GetRequiredService<Processors.IQueueProcessor>();
-        var dlq     = sp.GetRequiredService<DeadLetterService>();
+        // Usaremos el IServiceProvider principal para obtener el IServiceScopeFactory
+        var sp = _sp;
+        var qm = sp.GetRequiredService<QueueManager>();
+        var store = sp.GetRequiredService<ITransaccionStore>();
+        var dlq = sp.GetRequiredService<DeadLetterService>();
         var limiter = sp.GetRequiredService<RateLimiter>();
-        var logger  = sp.GetRequiredService<ILogger<WorkerService>>();
-        var cb      = sp.GetRequiredService<CallbackService>();
+        var logger = sp.GetRequiredService<ILogger<WorkerService>>();
+        var cb = sp.GetRequiredService<CallbackService>();
 
         // ✅ Nuevo: obtener QueueStateService
         var queueState = sp.GetRequiredService<QueueStateService>();
@@ -72,8 +69,11 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
         var maxRetries = qSection?.GetValue<int?>("MaxRetries") ?? 5;
         var baseBackoffMs = qSection?.GetValue<int?>("BaseBackoffMs") ?? 300;
 
+        // ✅ Nuevo: obtener el factory para pasarlo al worker
+        var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+
         // ✅ Nuevo: pasar queueState
-        return new WorkerService(queueName, qm, store, proc, dlq, limiter, logger, cb, queueState, maxRetries, baseBackoffMs);
+        return new WorkerService(queueName, qm, store, dlq, limiter, logger, cb, queueState, scopeFactory, maxRetries, baseBackoffMs);
     }
 
     public async ValueTask DisposeAsync() => await StopAsync(CancellationToken.None);

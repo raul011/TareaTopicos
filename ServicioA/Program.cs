@@ -7,7 +7,7 @@ using TAREATOPICOS.ServicioA.Data;
 using TAREATOPICOS.ServicioA.Extensions;
 using TAREATOPICOS.ServicioA.Services.Seeders;
 using TAREATOPICOS.ServicioA.Services.Processors;
-using TAREATOPICOS.ServicioA.Services; 
+using TAREATOPICOS.ServicioA.Services;
 
 using Polly;
 using Polly.Extensions.Http;
@@ -86,8 +86,12 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor
 
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.PeriodoAcademicoProcessor>();
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
-                           TAREATOPICOS.ServicioA.Services.Processors.PeriodoAcademicoProcessor>();                           
+                           TAREATOPICOS.ServicioA.Services.Processors.PeriodoAcademicoProcessor>();
 
+// Registramos el nuevo procesador de GruposMateria
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
+                           TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();
 
 // Router (IQueueProcessor) → DefaultProcessor
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IQueueProcessor,

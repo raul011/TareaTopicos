@@ -64,11 +64,6 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
 
                             n.Id = 0;
                             _db.Niveles.Add(n);
-                            _logger.LogInformation("💾 Guardando cambios para Tx {TxId}", tx.Id);
-                            await _db.SaveChangesAsync(ct);
-
-                            await _guard.MarkProcessedAsync(tx.Id, ct);
-                            tx.Estado = "COMPLETADO";
                             return;
                         }
 
@@ -95,11 +90,6 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                             }
 
                             existente.Nombre = n.Nombre;
-                            _logger.LogInformation("💾 Guardando cambios para Tx {TxId}", tx.Id);
-                            await _db.SaveChangesAsync(ct);
-
-                            await _guard.MarkProcessedAsync(tx.Id, ct);
-                            tx.Estado = "COMPLETADO";
                             return;
                         }
 
@@ -121,11 +111,6 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
                             try
                             {
                                 _db.Niveles.Remove(entity);
-                                _logger.LogInformation("💾 Guardando cambios para Tx {TxId}", tx.Id);
-                                await _db.SaveChangesAsync(ct);
-
-                                await _guard.MarkProcessedAsync(tx.Id, ct);
-                                tx.Estado = "COMPLETADO";
                                 return;
                             }
                             catch (DbUpdateException ex) when ((ex.InnerException?.Message ?? ex.Message)
