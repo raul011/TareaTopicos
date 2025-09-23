@@ -12,8 +12,8 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20250916202123_InitialIndexUniquePlanEstudio")]
-    partial class InitialIndexUniquePlanEstudio
+    [Migration("20250923060122_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

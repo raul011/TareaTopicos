@@ -650,6 +650,12 @@ namespace ServicioA.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Aulas_Codigo",
+                table: "Aulas",
+                column: "Codigo",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_DetallesInscripciones_GrupoMateriaId",
                 table: "DetallesInscripciones",
                 column: "GrupoMateriaId");
@@ -664,6 +670,12 @@ namespace ServicioA.Migrations
                 name: "IX_Estudiantes_CarreraId",
                 table: "Estudiantes",
                 column: "CarreraId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Estudiantes_Registro",
+                table: "Estudiantes",
+                column: "Registro",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_GruposMaterias_AulaId",
@@ -707,6 +719,12 @@ namespace ServicioA.Migrations
                 column: "PeriodoId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Materias_Codigo",
+                table: "Materias",
+                column: "Codigo",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Materias_NivelId",
                 table: "Materias",
                 column: "NivelId");
@@ -718,9 +736,21 @@ namespace ServicioA.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_PeriodosAcademicos_Gestion",
+                table: "PeriodosAcademicos",
+                column: "Gestion",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PlanesEstudio_CarreraId",
                 table: "PlanesEstudio",
                 column: "CarreraId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlanesEstudio_Codigo",
+                table: "PlanesEstudio",
+                column: "Codigo",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlanMaterias_MateriaId",
