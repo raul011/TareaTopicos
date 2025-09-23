@@ -130,5 +130,37 @@
     {
         "url": "/api/planesdeestudio/PLAN-2023",
         "method": "DELETE"
+    },
+    {
+        "url": "/api/gruposmateria",
+        "method": "POST",
+        "body": {
+            "grupo": "A1",
+            "cupo": 40,
+            "estado": "ACTIVO",
+            "materiaCodigo": "MAT-101",
+            "docenteRegistro": "DOC-001",
+            "periodoGestion": "2024-II",
+            "horarioId": 1,
+            "aulaCodigo": "LAB-01"
+        }
+    },
+    {
+        "url": "/api/gruposmateria/grupo/A1",
+        "method": "PUT",
+        "body": {
+            "grupo": "A1",
+            "cupo": 45,
+            "estado": "ACTIVO",
+            "materiaCodigo": "MAT-101",
+            "docenteRegistro": "DOC-001",
+            "periodoGestion": "2024-II",
+            "horarioId": 1,
+            "aulaCodigo": "LAB-01"
+        }
+    },
+    {
+        "url": "/api/gruposmateria/grupo/A1",
+        "method": "DELETE"
     }
 ]
