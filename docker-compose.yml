@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: universidad
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: 1234
     ports:
       - "5432:5432"
     healthcheck:
@@ -39,7 +39,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5000
-      ConnectionStrings__DefaultConnection: Host=postgres;Database=universidad;Username=postgres;Password=postgres
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=universidad;Username=postgres;Password=1234
       Redis__ConnectionString: redis:6379
       SEED: "true" 
     ports:

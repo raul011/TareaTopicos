@@ -312,6 +312,191 @@ public async Task<IActionResult> RemoveQueue(string name)
 
     return NotFound(new { queue = name, message = "No existe" });
 }
+// === MIGRAR WORKERS ENTRE COLAS ===
+//migra n hilos de una cola a otra cola
+[HttpPost("queues/migrate")]
+public IActionResult MigrateWorkers(
+    [FromQuery] string from,
+    [FromQuery] string to,
+    [FromQuery] int count)
+{
+    if (count <= 0)
+        return BadRequest(new { message = "La cantidad debe ser mayor a 0" });
 
- 
+    if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
+        return BadRequest(new { message = "La cola origen y destino deben ser distintas" });
+
+    var queues = _workerHost.ListQueues();
+
+    if (!queues.ContainsKey(from))
+        return NotFound(new { queue = from, message = "Cola origen no existe" });
+    if (!queues.ContainsKey(to))
+        return NotFound(new { queue = to, message = "Cola destino no existe" });
+
+    var fromCurrent = queues[from];
+    var toCurrent = queues[to];
+
+    if (fromCurrent < count)
+        return BadRequest(new { message = $"Cola {from} solo tiene {fromCurrent} workers" });
+
+    // Quitar de origen
+    _workerHost.ScaleQueue(from, fromCurrent - count);
+    // Agregar a destino
+    _workerHost.ScaleQueue(to, toCurrent + count);
+
+    return Ok(new
+    {
+        from,
+        to,
+        moved = count,
+        fromWorkers = fromCurrent - count,
+        toWorkers = toCurrent + count
+    });
+}
+// === BALANCEAR WORKERS ENTRE TODAS LAS COLAS ===
+[HttpPost("queues/balance")]
+public IActionResult BalanceWorkers()
+{
+    var queues = _workerHost.ListQueues();
+
+    if (queues.Count == 0)
+        return BadRequest(new { message = "No hay colas para balancear" });
+
+    // promedio redondeado
+    var avg = (int)Math.Round(queues.Values.Average());
+
+    foreach (var kv in queues)
+    {
+        _workerHost.ScaleQueue(kv.Key, avg);
+    }
+
+    return Ok(new
+    {
+        balancedTo = avg,
+        queues = _workerHost.ListQueues()
+    });
+}
+// === REINTENTAR UNA TAREA PUNTUAL DEL DLQ ===
+[HttpPost("queues/{name}/dlq/retry/{id:guid}")]
+public async Task<IActionResult> DlqRetry(string name, Guid id, CancellationToken ct)
+{
+    var db = _mux.GetDatabase();
+    var key = $"{_prefix}{name}:dlq";
+    var vals = await db.ListRangeAsync(key, 0, -1);
+
+    foreach (var v in vals)
+    {
+        if (!v.HasValue) continue;
+        var raw = v.ToString();
+        if (raw?.Contains(id.ToString()) == true)
+        {
+            // Eliminar del DLQ
+            await db.ListRemoveAsync(key, v);
+
+            // Reencolar en la cola normal con prioridad alta
+            var tx = JsonSerializer.Deserialize<Transaccion>(raw!);
+            if (tx != null)
+            {
+                tx.Priority = 0;
+                tx.NotBefore = DateTimeOffset.UtcNow;
+                await _qm.EnqueueAsync(tx, name, ct);
+            }
+
+            return Ok(new { queue = name, id, retried = true });
+        }
+    }
+
+    return NotFound(new { queue = name, id, message = "No encontrado en DLQ" });
+}
+// === ELIMINAR UNA TAREA PUNTUAL DEL DLQ ===
+[HttpDelete("queues/{name}/dlq/{id:guid}")]
+public async Task<IActionResult> DlqDelete(string name, Guid id)
+{
+    var db = _mux.GetDatabase();
+    var key = $"{_prefix}{name}:dlq";
+    var vals = await db.ListRangeAsync(key, 0, -1);
+
+    foreach (var v in vals)
+    {
+        if (!v.HasValue) continue;
+        var raw = v.ToString();
+        if (raw?.Contains(id.ToString()) == true)
+        {
+            await db.ListRemoveAsync(key, v);
+            return Ok(new { queue = name, id, deleted = true });
+        }
+    }
+
+    return NotFound(new { queue = name, id, message = "No encontrado en DLQ" });
+}
+// === MOVER TAREAS MANUALMENTE ENTRE COLAS ===
+[HttpPost("queues/move")]
+public async Task<IActionResult> MoveTasks(
+    [FromQuery] string from,
+    [FromQuery] string to,
+    [FromQuery] int count,
+    CancellationToken ct)
+{
+    if (count <= 0)
+        return BadRequest(new { message = "La cantidad debe ser mayor a 0" });
+
+    if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
+        return BadRequest(new { message = "La cola origen y destino deben ser distintas" });
+
+    var db = _mux.GetDatabase();
+    var fromKey = $"{_prefix}{from}:p:0"; // prioridad alta por defecto
+    var moved = 0;
+
+    for (int i = 0; i < count; i++)
+    {
+        var raw = await db.ListLeftPopAsync(fromKey);
+        if (!raw.HasValue) break;
+
+        var tx = JsonSerializer.Deserialize<Transaccion>(raw!);
+        if (tx != null)
+        {
+            await _qm.EnqueueAsync(tx, to, ct);
+            moved++;
+        }
+    }
+
+    return Ok(new { from, to, moved });
+}
+// // AdminController.cs
+// [ApiController]
+// [Route("admin")]
+// public class AdminController : ControllerBase
+// {
+//     private readonly WorkerHost _workerHost;
+
+//     public AdminController(WorkerHost workerHost)
+//     {
+//         _workerHost = workerHost;
+//     }
+// POST http://localhost:5001/admin/queues?name=inscripciones&workers=5&processor=NivelProcessor
+// POST http://localhost:5001/admin/queues?name=usuarios&workers=3&processor=DefaultProcessor
+
+    // =======================
+    // CREAR COLA ESPECIALIZADA
+    // =======================
+    [HttpPost("queues")]
+    public IActionResult AddQueue(
+        [FromQuery] string name,
+        [FromQuery] int workers,
+        [FromQuery] string processor = "DefaultProcessor")
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return BadRequest(new { message = "Debe especificar un nombre de cola" });
+
+        if (workers <= 0)
+            return BadRequest(new { message = "Workers debe ser > 0" });
+
+        var ok = _workerHost.AddQueue(name, workers, processor);
+        if (!ok)
+            return Conflict(new { message = $"Cola {name} ya existe" });
+
+        return Ok(new { name, workers, processor });
+    }
+// }
+
 }
