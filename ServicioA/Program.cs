@@ -165,8 +165,13 @@ builder.Services.AddAuthorization();
 
 // Tu registro de colas/servicios propios
 builder.Services.AddServicioAQueues(builder.Configuration);
+// WorkerHost: como Singleton e IHostedService
+builder.Services.AddSingleton<WorkerHost>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<WorkerHost>());
+
 
 var app = builder.Build();
+
 
 // 🚀 APLICAR MIGRACIONES AQUÍ (después de Build, antes de Run)
 // 👇 MIGRAR + SEED (dentro de Docker también)

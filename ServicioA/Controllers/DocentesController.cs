@@ -11,6 +11,7 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+// [Authorize]
 public class DocentesController : ControllerBase
 {
     private readonly ServicioAContext _context;

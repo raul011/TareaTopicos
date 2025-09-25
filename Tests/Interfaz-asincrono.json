@@ -185,5 +185,37 @@
     {
         "url": "/api/gruposmateria/estado/{id}",
         "method": "GET"
+    },
+    {
+        "url": "/api/gruposmateria/async",
+        "method": "POST",
+        "body": {
+            "grupo": "B1",
+            "cupo": 35,
+            "estado": "ACTIVO",
+            "materiaCodigo": "FIS-102",
+            "docenteRegistro": "DOC-002",
+            "periodoGestion": "2025-I",
+            "horarioId": 2,
+            "aulaCodigo": "AUD-02"
+        }
+    },
+    {
+        "url": "/api/gruposmateria/async/grupo/B1",
+        "method": "PUT",
+        "body": {
+            "grupo": "B1",
+            "cupo": 38,
+            "estado": "ACTIVO",
+            "materiaCodigo": "FIS-102",
+            "docenteRegistro": "DOC-002",
+            "periodoGestion": "2025-I",
+            "horarioId": 2,
+            "aulaCodigo": "AUD-02"
+        }
+    },
+    {
+        "url": "/api/gruposmateria/async/grupo/B1",
+        "method": "DELETE"
     }
 ]

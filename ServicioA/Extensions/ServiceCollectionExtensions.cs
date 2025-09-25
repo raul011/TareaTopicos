@@ -40,6 +40,11 @@ namespace TAREATOPICOS.ServicioA.Extensions
             services.AddSingleton<RedisScaleBackplane>();
 
             // ===== Processors (negocio) =====
+            // ===== Processors (negocio) =====
+// ===== Processors (negocio) =====
+services.AddScoped<DefaultProcessor>();
+services.AddScoped<NivelProcessor>();
+
             // ✅ ahora
 services.AddScoped<IQueueProcessor, NivelProcessor>();
 services.AddScoped<IQueueProcessor, DefaultProcessor>();

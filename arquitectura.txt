@@ -38,8 +38,8 @@ ServicioA/
 │  │  └─ ISeeder.cs
 │  │  
 │  ├─ ConfigWatcher.cs
-CallbackService.cs
-QueueStateService.cs
+│  ├─ CallbackService.cs
+│  ├─ QueueStateService.cs
 │  ├─ DeadLetterService.cs
 │  ├─ IBackgroundTaskQueue.cs
 │  ├─ IIdempotencyGuard.cs

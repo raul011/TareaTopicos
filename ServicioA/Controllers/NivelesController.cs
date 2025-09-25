@@ -15,13 +15,15 @@ public class NivelesController : ControllerBase
     private readonly ITransaccionStore _store;
     private readonly ServicioAContext _db;
     private readonly IConfiguration _cfg;
-
-    public NivelesController(QueueManager qm, ITransaccionStore store, ServicioAContext db, IConfiguration cfg)
+    private readonly WorkerHost _workerHost;
+    public NivelesController(QueueManager qm, ITransaccionStore store, ServicioAContext db, IConfiguration cfg,
+    WorkerHost workerHost)
     {
         _qm = qm;
         _store = store;
         _db = db;
         _cfg = cfg;
+         _workerHost = workerHost;
     }
     
 
