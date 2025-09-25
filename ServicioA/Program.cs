@@ -55,6 +55,7 @@ builder.Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 // Program.cs
 // Program.cs (solo la parte de DI relevante a processors/queues)
 
@@ -132,6 +133,8 @@ builder.Services.AddScoped<ITransaccionStore, RedisTransaccionStore>(); // tu st
 // Tu registro de colas/servicios propios
 builder.Services.AddServicioAQueues(builder.Configuration);
 builder.Services.AddSingleton<QueueStateService>();
+
+builder.Services.AddScoped<IProcessor, InscripcionCompletaProcessor>();
 
 // Health checks
 builder.Services.AddHealthChecks();

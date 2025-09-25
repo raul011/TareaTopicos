@@ -59,6 +59,8 @@ namespace TAREATOPICOS.ServicioA.Services.Processors
 
                 else if (typeName.Contains("DetalleInscripcionProcessor", StringComparison.OrdinalIgnoreCase))
                     _map["DetalleInscripcion"] = processor;
+                else if (typeName.Contains("InscripcionCompletaProcessor", StringComparison.OrdinalIgnoreCase))
+                    _map["InscripcionCompleta"] = processor;
    
                 // Agrega más 'else if' para futuras entidades aquí.
             }

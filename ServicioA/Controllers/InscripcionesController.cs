@@ -6,18 +6,27 @@ using TAREATOPICOS.ServicioA.Dtos;
 using TAREATOPICOS.ServicioA.Dtos.request;
 using TAREATOPICOS.ServicioA.Dtos.response;
 
+using TAREATOPICOS.ServicioA.Services;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 
 namespace TAREATOPICOS.ServicioA.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/inscripciones-sync")] // <-- CAMBIO: Ruta explícita para evitar ambigüedad
 // [Authorize]
 public class InscripcionesController : ControllerBase
 {
     private readonly ServicioAContext _context;
-    public InscripcionesController(ServicioAContext context) => _context = context;
+    private readonly QueueManager _qm;
+    private readonly IConfiguration _cfg;
 
+    public InscripcionesController(ServicioAContext context, QueueManager qm, IConfiguration cfg)
+    {
+        _context = context;
+        _qm = qm;
+        _cfg = cfg;
+    }
 
 
     // POST: api/inscripciones/completa - NUEVO: Inscripción completa con múltiples materias
@@ -248,6 +257,196 @@ public class InscripcionesController : ControllerBase
             };
             return StatusCode(500, errorResponse);
         }
+    }
+
+    // =====================================================================================
+    // === NUEVOS ENDPOINTS PARA ESTUDIO ACADÉMICO (SÍNCRONO vs ASÍNCRONO) =================
+    // =====================================================================================
+
+    /// <summary>
+    /// [SÍNCRONO] Crea una inscripción completa para un estudiante en un período,
+    /// usando identificadores de negocio. El cliente espera a que toda la operación termine.
+    /// </summary>
+    [HttpPost("sync/completa")]
+    public async Task<IActionResult> CrearInscripcionCompletaSync([FromBody] InscripcionCompletaPorCodigosRequest dto, CancellationToken ct)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            // 1. TRADUCCIÓN: Resolver Estudiante y Periodo
+            var estudiante = await _context.Estudiantes.FirstOrDefaultAsync(e => e.Registro == dto.EstudianteRegistro, ct);
+            if (estudiante == null) return BadRequest(new { error = $"Estudiante con registro '{dto.EstudianteRegistro}' no encontrado." });
+
+            var periodo = await _context.PeriodosAcademicos.FirstOrDefaultAsync(p => p.Gestion == dto.PeriodoGestion, ct);
+            if (periodo == null) return BadRequest(new { error = $"Período con gestión '{dto.PeriodoGestion}' no encontrado." });
+
+            // 2. BUSCAR O CREAR INSCRIPCIÓN: En lugar de fallar si existe, la reutilizamos.
+            var inscripcion = await _context.Inscripciones
+                .Include(i => i.Detalles) // Cargar detalles existentes
+                .FirstOrDefaultAsync(i => i.EstudianteId == estudiante.Id && i.PeriodoId == periodo.Id, ct);
+
+            bool esNuevaInscripcion = inscripcion == null;
+            if (esNuevaInscripcion) { /* Se creará más adelante si todo es válido */ }
+
+            var gruposMateria = new List<GrupoMateria>();
+            var errores = new List<string>();
+
+            // 3. TRADUCCIÓN Y VALIDACIÓN INICIAL: Resolver Grupos de Materia
+            foreach (var codigoCompleto in dto.MateriaGrupoCodigos.Distinct())
+            {
+                var parts = codigoCompleto.Split('-');
+                if (parts.Length < 2)
+                {
+                    errores.Add($"El código '{codigoCompleto}' tiene un formato inválido. Debe ser 'CODIGOMATERIA-GRUPO'.");
+                    continue;
+                }
+                var grupoNombre = parts.Last();
+                var materiaCodigo = string.Join("-", parts.Take(parts.Length - 1));
+
+                var grupo = await _context.GruposMaterias
+                    .Include(g => g.Materia)
+                    .Include(g => g.Horario)
+                    .FirstOrDefaultAsync(g => g.Materia.Codigo == materiaCodigo && g.Grupo == grupoNombre && g.PeriodoId == periodo.Id, ct);
+
+                if (grupo != null)
+                {
+                    gruposMateria.Add(grupo);
+                }
+                else
+                {
+                    errores.Add($"El grupo '{codigoCompleto}' no fue encontrado para el período '{dto.PeriodoGestion}'.");
+                }
+            }
+
+            if (errores.Any()) return BadRequest(new { errores });
+
+            // 4. VALIDACIONES DE NEGOCIO DETALLADAS
+            var detallesValidos = new List<DetalleInscripcion>();
+            var horariosSeleccionados = new List<Horario>();
+
+            foreach (var grupo in gruposMateria)
+            {
+                // Validar si ya está inscrito en esta materia/grupo
+                if (!esNuevaInscripcion && inscripcion.Detalles.Any(d => d.GrupoMateriaId == grupo.Id))
+                {
+                    continue; // Ya está inscrito, simplemente omitir y continuar con el siguiente.
+                }
+
+                // Validar cupo
+                var inscritos = await _context.DetallesInscripciones.CountAsync(d => d.GrupoMateriaId == grupo.Id, ct);
+                if (inscritos >= grupo.Cupo)
+                {
+                    errores.Add($"Sin cupo en {grupo.Materia.Codigo}-{grupo.Grupo}. (Límite: {grupo.Cupo})");
+                }
+
+                // Validar prerrequisitos (simplificado: asume que el historial está correcto)
+                var prerequisitos = await _context.Prerequisitos
+                    .Where(p => p.MateriaId == grupo.MateriaId)
+                    .Select(p => p.MateriaPrerequisitoId)
+                    .ToListAsync(ct);
+
+                if (prerequisitos.Any())
+                {
+                    var materiasAprobadas = await _context.HistorialesAcademicos
+                        .Where(h => h.DetalleInscripcion.Inscripcion.EstudianteId == estudiante.Id && h.Aprobado)
+                        .Select(h => h.DetalleInscripcion.GrupoMateria.MateriaId)
+                        .ToListAsync(ct);
+
+                    var faltantes = prerequisitos.Except(materiasAprobadas).Count();
+                    if (faltantes > 0)
+                    {
+                        errores.Add($"Faltan {faltantes} prerrequisitos para {grupo.Materia.Codigo}.");
+                    }
+                }
+
+                // Validar choque de horarios
+                if (grupo.Horario != null)
+                {
+                    if (horariosSeleccionados.Any(h => h.Dia == grupo.Horario.Dia && h.HoraInicio < grupo.Horario.HoraFin && grupo.Horario.HoraInicio < h.HoraFin))
+                    {
+                        errores.Add($"Choque de horario para {grupo.Materia.Codigo}-{grupo.Grupo}.");
+                    }
+                    else
+                    {
+                        horariosSeleccionados.Add(grupo.Horario);
+                    }
+                }
+
+                if (!errores.Any())
+                {
+                    detallesValidos.Add(new DetalleInscripcion
+                    {
+                        Codigo = $"{grupo.Materia.Codigo}-{grupo.Grupo}",
+                        Estado = "INSCRITO",
+                        GrupoMateriaId = grupo.Id
+                    });
+                }
+            }
+
+            if (errores.Any()) return BadRequest(new { errores });
+
+            // 5. EJECUCIÓN: Crear la inscripción y sus detalles
+            if (esNuevaInscripcion)
+            {
+                inscripcion = new Inscripcion
+                {
+                    Fecha = DateTime.UtcNow,
+                    Estado = "PENDIENTE",
+                    EstudianteId = estudiante.Id,
+                    PeriodoId = periodo.Id,
+                    Detalles = detallesValidos
+                };
+                _context.Inscripciones.Add(inscripcion);
+            }
+            else
+            {
+                // Agregar los nuevos detalles a la inscripción existente
+                foreach (var detalle in detallesValidos) { inscripcion.Detalles.Add(detalle); }
+            }
+
+            await _context.SaveChangesAsync(ct);
+
+            await transaction.CommitAsync(ct);
+
+            // 6. RESPUESTA: Devolver el objeto creado
+            return CreatedAtAction(nameof(GetById), new { id = inscripcion.Id }, new { inscripcionId = inscripcion.Id, message = "Inscripción completa creada exitosamente." });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            return StatusCode(500, new { error = "Error interno del servidor.", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// [ASÍNCRONO] Encola una solicitud de inscripción completa.
+    /// Responde inmediatamente con un ID de transacción para seguimiento.
+    /// </summary>
+    [HttpPost("async/completa")]
+    public async Task<IActionResult> CrearInscripcionCompletaAsync([FromBody] InscripcionCompletaPorCodigosRequest dto, CancellationToken ct)
+    {
+        if (dto.MateriaGrupoCodigos == null || !dto.MateriaGrupoCodigos.Any())
+        {
+            return BadRequest(new { error = "Debe proporcionar al menos un código de materia/grupo." });
+        }
+
+        var tx = new Transaccion
+        {
+            Entidad = "InscripcionCompleta", // Nuevo tipo de entidad para el procesador
+            TipoOperacion = "Crear",
+            Payload = JsonSerializer.Serialize(dto),
+            Estado = "EN_COLA",
+            Priority = 1, // Prioridad media por defecto
+            NotBefore = DateTimeOffset.UtcNow,
+            CallbackUrl = _cfg["Webhook:DefaultUrl"],
+            CallbackSecret = _cfg["Webhook:DefaultSecret"],
+            IdempotencyKey = Guid.NewGuid().ToString() // Clave única para esta operación
+        };
+
+        await _qm.EnqueueAsync(tx, "default", ct);
+
+        return Accepted(new { transaccionId = tx.Id, estado = tx.Estado });
     }
 
     // GET: api/inscripciones/{id}
