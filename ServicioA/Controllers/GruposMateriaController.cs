@@ -11,7 +11,7 @@ namespace TAREATOPICOS.ServicioA.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+// [Authorize]
 public class GruposMateriaController : ControllerBase
 {
     private readonly ServicioAContext _context;

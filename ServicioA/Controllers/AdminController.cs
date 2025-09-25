@@ -7,6 +7,7 @@ using TAREATOPICOS.ServicioA.Models;
 using TAREATOPICOS.ServicioA.Services;
 using TAREATOPICOS.ServicioA.Services.Processors;
 
+
 namespace TAREATOPICOS.ServicioA.Controllers;
 
 [ApiController]
@@ -22,7 +23,7 @@ public class AdminController : ControllerBase
     private readonly IConfiguration _cfg;
     private readonly string _prefix;
     private readonly IConnectionMultiplexer _redis;
-
+    private readonly WorkerHost _workerHost;
 
     public AdminController(
         IConnectionMultiplexer mux,
@@ -32,7 +33,8 @@ public class AdminController : ControllerBase
         VisibilityReclaimer reclaimer,
         IEnumerable<IQueueProcessor> processors, // inyecta todos; tomamos Default para process-once
         IConfiguration cfg,
-        IConnectionMultiplexer redis)
+        IConnectionMultiplexer redis,
+        WorkerHost workerHost) 
     {
         _mux = mux;
         _qm = qm;
@@ -43,6 +45,7 @@ public class AdminController : ControllerBase
         _cfg = cfg;
         _prefix = _cfg.GetValue<string>("RedisQueue:KeyPrefix") ?? "q:";
         _redis = redis;
+        _workerHost = workerHost;
     }
 
     // --- PAUSE / RESUME ---
@@ -272,6 +275,43 @@ public async Task<IActionResult> GetDlqCount(string queue)
     return Ok(new { queue, dlqCount = count });
 }
 
+// === LISTAR COLAS Y CONCURRENCIA ===
+[HttpGet("queues")]
+public IActionResult ListQueues()
+{
+    var queues = _workerHost.ListQueues();
+    return Ok(queues);
+}
 
+// === CREAR COLA NUEVA ===
+[HttpPost("queues/{name}")]
+public IActionResult AddQueue(string name, [FromQuery] int workers = 1)
+{
+    if (_workerHost.AddQueue(name, workers))
+        return Ok(new { queue = name, workers, created = true });
 
+    return Conflict(new { queue = name, message = "Ya existe" });
+}
+
+// === AJUSTAR WORKERS ===
+[HttpPatch("queues/{name}/scale")]
+public IActionResult ScaleQueue(string name, [FromQuery] int workers)
+{
+    if (_workerHost.ScaleQueue(name, workers))
+        return Ok(new { queue = name, workers, scaled = true });
+
+    return NotFound(new { queue = name, message = "No existe" });
+}
+
+// === ELIMINAR COLA ===
+[HttpDelete("queues/{name}")]
+public async Task<IActionResult> RemoveQueue(string name)
+{
+    if (await _workerHost.RemoveQueueAsync(name))
+        return Ok(new { queue = name, removed = true });
+
+    return NotFound(new { queue = name, message = "No existe" });
+}
+
+ 
 }

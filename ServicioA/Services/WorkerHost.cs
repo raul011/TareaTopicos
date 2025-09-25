@@ -75,6 +75,58 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
         // ✅ Nuevo: pasar queueState
         return new WorkerService(queueName, qm, store, proc, dlq, limiter, logger, cb, queueState, maxRetries, baseBackoffMs);
     }
+    private readonly object _lock = new();
+
+    public IReadOnlyDictionary<string, int> ListQueues()
+    {
+        lock (_lock)
+        {
+            return _pools.ToDictionary(p => p.Key, p => p.Value.Concurrency);
+        }
+    }
+
+    public bool AddQueue(string name, int workers)
+    {
+        lock (_lock)
+        {
+            if (_pools.ContainsKey(name))
+                return false; // ya existe
+
+            var pool = new WorkerPool(name, CreateWorker, _sp.GetRequiredService<ILogger<WorkerPool>>());
+            pool.SetConcurrency(Math.Max(1, workers));
+            _pools[name] = pool;
+
+            _logger.LogInformation("WorkerHost: cola {Name} agregada con {Workers} workers", name, workers);
+            return true;
+        }
+    }
+
+    public bool ScaleQueue(string name, int workers)
+    {
+        lock (_lock)
+        {
+            if (!_pools.TryGetValue(name, out var pool))
+                return false;
+
+            pool.SetConcurrency(Math.Max(0, workers));
+            return true;
+        }
+    }
+
+  public async Task<bool> RemoveQueueAsync(string name)
+{
+    WorkerPool? pool;
+    lock (_lock)
+    {
+        if (!_pools.TryGetValue(name, out pool))
+            return false; // ✅ corregido
+        _pools.Remove(name);
+    }
+
+    await pool!.StopAsync();
+    _logger.LogInformation("WorkerHost: cola {Name} eliminada", name);
+    return true;
+}
 
     public async ValueTask DisposeAsync() => await StopAsync(CancellationToken.None);
 }

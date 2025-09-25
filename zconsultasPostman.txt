@@ -92,5 +92,48 @@ docker compose up -d --build
 docker compose logs -f servicioa
 
 
+http://localhost:5001/queue-dashboard.html
 
  
+
+ //para reiniciar si se cambia models
+rm -rf ServicioA/Migrations
+dotnet ef migrations add InitialCreate -p ServicioA -s ServicioA
+docker compose down -v
+docker compose up -d --build
+
+
+
+
+//Crear una cola llamada apache1 con 2 hilos
+POST http://localhost:5001/admin/queues/apache1?workers=2
+{
+  "queue": "apache1",
+  "workers": 2,
+  "created": true
+}
+//Escalar esa cola a 5 hilos
+PATCH http://localhost:5001/admin/queues/apache1/scale?workers=5
+{
+  "queue": "apache1",
+  "workers": 5,
+  "scaled": true
+}
+//Listar todas las colas activas
+GET http://localhost:5001/admin/queues
+{
+  "default": 1,
+  "apache1": 5
+}
+//Borrar la cola apache1
+DELETE http://localhost:5001/admin/queues/apache1
+{
+  "queue": "apache1",
+  "removed": true
+}
+
+
+
+
+
+
