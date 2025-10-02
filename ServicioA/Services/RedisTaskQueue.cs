@@ -59,4 +59,18 @@ public class RedisTaskQueue : IBackgroundTaskQueue
 
         return null;
     }
+    public async Task<long> GetBacklogSizeAsync(string queueName)
+{
+    var db = _mux.GetDatabase();
+    var qname = string.IsNullOrWhiteSpace(queueName) ? DefaultQueue : queueName;
+
+    long total = 0;
+    foreach (var p in new[] { 0, 1, 2 })
+    {
+        var key = KeyFor(qname, p);
+        total += await db.ListLengthAsync(key);
+    }
+    return total;
+}
+
 }

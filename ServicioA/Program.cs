@@ -8,6 +8,7 @@ using TAREATOPICOS.ServicioA.Extensions;
 using TAREATOPICOS.ServicioA.Services.Seeders;
 using TAREATOPICOS.ServicioA.Services.Processors;
 using TAREATOPICOS.ServicioA.Services; 
+using TAREATOPICOS.ServicioA.Services.Options;
 
 using Polly;
 using Polly.Extensions.Http;
@@ -127,6 +128,7 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor
 
 
 
+builder.Services.AddScoped<QueueManager>();
 
 builder.Services.AddScoped<ITransaccionStore, RedisTransaccionStore>(); // tu store real
 
@@ -160,7 +162,7 @@ builder.Services
 builder.Services.AddAuthorization();
 
 
-
+ 
 // Tu registro de colas/servicios propios
 builder.Services.AddServicioAQueues(builder.Configuration);
 // WorkerHost: como Singleton e IHostedService
@@ -202,6 +204,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseRouting();
+
+app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseAuthentication();

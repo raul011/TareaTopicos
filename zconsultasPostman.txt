@@ -135,7 +135,8 @@ DELETE http://localhost:5001/admin/queues/apache1
 POST http://localhost:5001/admin/queues/migrate?from=apache1&to=apache2&count=2
 //Balancear misma cantidad de hilos en todas las colas 
 POST http://localhost:5001/admin/queues/balance
-
+//para crear cola especializada
+POST http://localhost:5001/admin/queues?name=inscripciones&workers=5&processor=NivelProcessor
 
 
 

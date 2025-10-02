@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using TAREATOPICOS.ServicioA.Options;
 using TAREATOPICOS.ServicioA.Services;
 using TAREATOPICOS.ServicioA.Services.Processors;
- 
 
 namespace TAREATOPICOS.ServicioA.Extensions
 {
@@ -17,7 +16,9 @@ namespace TAREATOPICOS.ServicioA.Extensions
         /// </summary>
         public static IServiceCollection AddServicioAQueues(this IServiceCollection services, IConfiguration cfg)
         {
-            // ===== Options (SIN ambigüedad) =====
+            // ============================
+            // 1) Opciones de configuración (bind desde appsettings.json)
+            // ============================
             services.Configure<RedisOptions>(cfg.GetSection("Redis"));
             services.Configure<RedisQueueOptions>(cfg.GetSection("RedisQueue"));
             services.Configure<QueuesOptions>(opts =>
@@ -25,31 +26,44 @@ namespace TAREATOPICOS.ServicioA.Extensions
                 opts.Queues = cfg.GetSection("Queues").Get<List<QueueItemOptions>>() ?? new();
             });
 
-            // ===== Redis Connection =====
+            // ============================
+            // 2) Redis Connection
+            // ============================
             var redisConn = cfg.GetSection("Redis")["ConnectionString"] ?? "localhost:6379";
             services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConn));
 
-            // ===== Cola + Store + utilitarios =====
+            // ============================
+            // 3) Infraestructura de colas
+            // ============================
             services.AddSingleton<IBackgroundTaskQueue, RedisTaskQueue>();
             services.AddSingleton<ITransaccionStore, RedisTransaccionStore>();
-            services.AddSingleton<QueueManager>();
+
+            // ⚡ QueueManager: debe ser Scoped porque depende de IOptionsSnapshot
+            services.AddScoped<QueueManager>();
+
+            // ============================
+            // 4) Servicios de soporte
+            // ============================
             services.AddSingleton<DeadLetterService>();
             services.AddSingleton<VisibilityReclaimer>();
             services.AddSingleton<RateLimiter>();
             services.AddSingleton<ConfigWatcher>();
             services.AddSingleton<RedisScaleBackplane>();
+            services.AddSingleton<QueueStateService>();
 
-            // ===== Processors (negocio) =====
-            // ===== Processors (negocio) =====
-// ===== Processors (negocio) =====
-services.AddScoped<DefaultProcessor>();
-services.AddScoped<NivelProcessor>();
+            // ============================
+            // 5) Processors de negocio
+            // ============================
+            services.AddScoped<DefaultProcessor>();
+            services.AddScoped<NivelProcessor>();
 
-            // ✅ ahora
-services.AddScoped<IQueueProcessor, NivelProcessor>();
-services.AddScoped<IQueueProcessor, DefaultProcessor>();
+            // Se registran como IQueueProcessor (inyección polimórfica)
+            services.AddScoped<IQueueProcessor, NivelProcessor>();
+            services.AddScoped<IQueueProcessor, DefaultProcessor>();
 
-            // ===== Worker Host (HostedService que crea pools/hilos por cola) =====
+            // ============================
+            // 6) WorkerHost (HostedService)
+            // ============================
             services.AddHostedService<WorkerHost>();
 
             return services;

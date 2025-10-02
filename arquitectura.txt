@@ -36,7 +36,8 @@ ServicioA/
 │  │  └─ NivelProcessor.cs
 │  ├─ seeders/
 │  │  └─ ISeeder.cs
-│  │  
+│  ├─ QueueFullException.cs
+│  ├─ QueueOptions.cs
 │  ├─ ConfigWatcher.cs
 │  ├─ CallbackService.cs
 │  ├─ QueueStateService.cs

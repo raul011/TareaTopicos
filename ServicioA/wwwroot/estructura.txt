@@ -1,0 +1,20 @@
+wwwroot/
+│
+├── index.html
+├── css/
+│   └── style.css
+└── js/
+    ├── api.js
+    ├── main.js
+    └── render.js
+
+
+
+
+👉 Dentro tienes css para estilos y js para scripts.
+👉 Los archivos están bien organizados:
+
+style.css → para tus estilos.
+api.js → lógica de conexión o funciones de API.
+main.js → punto de entrada principal de tu frontend.
+render.js → encargado de renderizar o actualizar la vista.
