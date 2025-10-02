@@ -22,19 +22,21 @@ public class MateriasController : ControllerBase
     private readonly ITransaccionStore _store;
     private readonly IConfiguration _cfg;
     private readonly ILogger<MateriasController> _logger;
-
+    private readonly WorkerHost _workerHost;
     public MateriasController(
         ServicioAContext db,
         QueueManager qm,
         ITransaccionStore store,
         IConfiguration cfg,
-        ILogger<MateriasController> logger)
+        ILogger<MateriasController> logger, 
+        WorkerHost workerHost)
     {
         _db = db;
         _qm = qm;
         _store = store;
         _cfg = cfg;
         _logger = logger;
+        _workerHost = workerHost;
     }
 
     // ===  ENDPOINTS SÍNCRONOS (LECTURA Y ESCRITURA DIRECTA) ===

@@ -17,19 +17,21 @@ public class AulasController : ControllerBase
     private readonly ITransaccionStore _store;
     private readonly IConfiguration _cfg;
     private readonly ILogger<AulasController> _logger;
-
+    private readonly WorkerHost _workerHost;
     public AulasController(
         ServicioAContext context,
         QueueManager qm,
         ITransaccionStore store,
         IConfiguration cfg,
-        ILogger<AulasController> logger)
+        ILogger<AulasController> logger,
+        WorkerHost workerHost)
     {
         _context = context;
         _qm = qm;
         _store = store;
         _cfg = cfg;
         _logger = logger;
+        _workerHost = workerHost;
     }
 
     // === ENDPOINTS SÍNCRONOS ===

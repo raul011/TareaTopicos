@@ -97,7 +97,7 @@ public async Task EnqueueAsync(
 
     if (string.IsNullOrWhiteSpace(queueName) || queueName == "balanced")
     {
-        // 🔄 Round robin balanceado
+        //  Round robin balanceado
         var queues = _workerHost.ListQueues().Keys.ToList();
         if (queues.Count == 0)
             throw new InvalidOperationException("No hay colas disponibles para balancear.");
@@ -110,7 +110,7 @@ public async Task EnqueueAsync(
     }
     else
     {
-        // 🎯 Encola directo en la cola indicada
+        //  Encola directo en la cola indicada
         await _queue.EnqueueAsync(tx, queueName, ct);
     }
 }

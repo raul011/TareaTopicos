@@ -18,13 +18,14 @@ public class DocentesController : ControllerBase
     private readonly QueueManager _qm;
     private readonly ITransaccionStore _store;
     private readonly IConfiguration _cfg;
-
-    public DocentesController(ServicioAContext context, QueueManager qm, ITransaccionStore store, IConfiguration cfg)
+    private readonly WorkerHost _workerHost;
+    public DocentesController(ServicioAContext context, QueueManager qm, ITransaccionStore store, IConfiguration cfg, WorkerHost workerHost )
     {
         _context = context;
         _qm = qm;
         _store = store;
         _cfg = cfg;
+        _workerHost = workerHost;
     }
 
     // === ENDPOINTS SÍNCRONOS ===

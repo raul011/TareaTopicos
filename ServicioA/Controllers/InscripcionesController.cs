@@ -20,12 +20,13 @@ public class InscripcionesController : ControllerBase
     private readonly ServicioAContext _context;
     private readonly QueueManager _qm;
     private readonly IConfiguration _cfg;
-
-    public InscripcionesController(ServicioAContext context, QueueManager qm, IConfiguration cfg)
+    private readonly WorkerHost _workerHost;
+    public InscripcionesController(ServicioAContext context, QueueManager qm, IConfiguration cfg,WorkerHost workerHost)
     {
         _context = context;
         _qm = qm;
         _cfg = cfg;
+        _workerHost = workerHost;
     }
 
 

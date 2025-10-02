@@ -24,13 +24,15 @@ public class EstudiantesController : ControllerBase
     private readonly IConfiguration _cfg;
     private readonly QueueManager _qm;
     private readonly ITransaccionStore _store;
+    private readonly WorkerHost _workerHost;
 
-    public EstudiantesController(ServicioAContext context, IConfiguration cfg, QueueManager qm, ITransaccionStore store)
+    public EstudiantesController(ServicioAContext context, IConfiguration cfg, QueueManager qm, ITransaccionStore store, WorkerHost workerHost)
     {
         _context = context;
         _cfg = cfg;
         _qm = qm;
         _store = store;
+        _workerHost = workerHost;
     }
 
     // === SÍNCRONOS ===

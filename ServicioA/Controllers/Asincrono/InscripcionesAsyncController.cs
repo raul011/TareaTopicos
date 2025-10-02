@@ -17,12 +17,13 @@ public class InscripcionesAsyncController : ControllerBase
     private readonly IBackgroundTaskQueue _queue; // encola la transacción (Redis)
     private readonly ITransaccionStore _store;    // guarda/lee estado (Redis)
     private readonly ServicioAContext _db;        // EF Core (solo para lecturas síncronas de negocio)
-
-    public InscripcionesAsyncController(IBackgroundTaskQueue queue, ITransaccionStore store, ServicioAContext db)
+    private readonly WorkerHost _workerHost;      // para ver si el worker está activo
+    public InscripcionesAsyncController(IBackgroundTaskQueue queue, ITransaccionStore store, ServicioAContext db,WorkerHost workerHost)
     {
         _queue = queue;
         _store = store;
         _db = db;
+        _workerHost = workerHost;
     }
 
     // 1) Crear inscripción (ASÍNCRONO: encola y responde 202)
