@@ -16,4 +16,5 @@ public interface IBackgroundTaskQueue
     /// Devuelve null si no hay nada.
     /// </summary>
     Task<Transaccion?> TryDequeueAsync(CancellationToken ct = default, string? queueName = null);
+        Task<long> GetBacklogSizeAsync(string queueName);
 }

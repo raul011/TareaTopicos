@@ -23,7 +23,7 @@ public class NivelesController : ControllerBase
         _store = store;
         _db = db;
         _cfg = cfg;
-         _workerHost = workerHost;
+        _workerHost = workerHost;
     }
     
 
@@ -255,42 +255,77 @@ private static bool IsUniqueViolation(DbUpdateException ex)
 
     // ===  ENDPOINTS ASÍNCRONAS  ===
     
-    // POST /api/niveles/async
-    [HttpPost("async")]
-    public async Task<IActionResult> CrearNivelAsync(
-        [FromBody] Nivel nivel,
-        [FromQuery] string? queue = "default",
-        [FromQuery] int priority = 1,
-        [FromQuery] DateTimeOffset? notBeforeUtc = null,
-        CancellationToken ct = default)
+    // // POST /api/niveles/async
+    // [HttpPost("async")]
+    // public async Task<IActionResult> CrearNivelAsync(
+    //     [FromBody] Nivel nivel,
+    //     [FromQuery] string? queue = "default",
+    //     [FromQuery] int priority = 1,
+    //     [FromQuery] DateTimeOffset? notBeforeUtc = null,
+    //     CancellationToken ct = default)
+    // {
+    //     // Evita duplicar por Numero (índice único)
+    //     if (await _db.Niveles.AnyAsync(x => x.Numero == nivel.Numero, ct))
+    //         return Accepted(new { mensaje = $"Nivel ya existe (Numero {nivel.Numero} duplicado)" });
+
+    //     var tx = new Transaccion
+    //     {
+    //         TipoOperacion = "POST",
+    //         Entidad       = "Nivel",
+    //         Payload       = JsonSerializer.Serialize(nivel),
+    //         Estado        = "EN_COLA",
+    //         Priority      = Math.Clamp(priority, 0, 2),
+    //         NotBefore     = notBeforeUtc ?? DateTimeOffset.UtcNow
+    //     };
+    //     tx.CallbackUrl    ??= _cfg["Webhook:DefaultUrl"];
+    //     tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
+    //     tx.IdempotencyKey ??= tx.Id.ToString();
+
+    //     await _qm.EnqueueAsync(tx, queue, ct);
+    //     return Accepted(new { id = tx.Id, estado = tx.Estado });
+    // }
+[HttpPost("async")]
+public async Task<IActionResult> CrearNivelAsync(
+    [FromBody] Nivel nivel,
+    [FromQuery] string? queue = null,
+
+    [FromQuery] int priority = 1,
+    [FromQuery] DateTimeOffset? notBeforeUtc = null,
+    CancellationToken ct = default)
+{
+    if (await _db.Niveles.AnyAsync(x => x.Numero == nivel.Numero, ct))
+        return Accepted(new { mensaje = $"Nivel ya existe (Numero {nivel.Numero} duplicado)" });
+
+    var tx = new Transaccion
     {
-        // Evita duplicar por Numero (índice único)
-        if (await _db.Niveles.AnyAsync(x => x.Numero == nivel.Numero, ct))
-            return Accepted(new { mensaje = $"Nivel ya existe (Numero {nivel.Numero} duplicado)" });
+        TipoOperacion = "POST",
+        Entidad       = "Nivel",
+        Payload       = JsonSerializer.Serialize(nivel),
+        Estado        = "EN_COLA",
+        Priority      = Math.Clamp(priority, 0, 2),
+        NotBefore     = notBeforeUtc ?? DateTimeOffset.UtcNow
+    };
+    tx.CallbackUrl    ??= _cfg["Webhook:DefaultUrl"];
+    tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
+    tx.IdempotencyKey ??= tx.Id.ToString();
 
-        var tx = new Transaccion
-        {
-            TipoOperacion = "POST",
-            Entidad       = "Nivel",
-            Payload       = JsonSerializer.Serialize(nivel),
-            Estado        = "EN_COLA",
-            Priority      = Math.Clamp(priority, 0, 2),
-            NotBefore     = notBeforeUtc ?? DateTimeOffset.UtcNow
-        };
-        tx.CallbackUrl    ??= _cfg["Webhook:DefaultUrl"];
-        tx.CallbackSecret ??= _cfg["Webhook:DefaultSecret"];
-        tx.IdempotencyKey ??= tx.Id.ToString();
+    // 👇 capturamos el nombre real de la cola
+    var chosenQueue = await _qm.EnqueueAsync(tx, queue, ct);
 
-        await _qm.EnqueueAsync(tx, queue, ct);
-        return Accepted(new { id = tx.Id, estado = tx.Estado });
-    }
+    return Accepted(new
+    {
+        id = tx.Id,
+        estado = tx.Estado,
+        queue = chosenQueue   // 👈 ahora devuelve la cola también
+    });
+}
 
     // PUT /api/niveles/async/numero/5077
     [HttpPut("async/numero/{numero:int}")]
     public async Task<IActionResult> ActualizarNivelPorNumeroAsync(
         int numero,
         [FromBody] Nivel nivel,                // el cliente NO manda Id
-        [FromQuery] string? queue = "default",
+        [FromQuery] string? queue = null,
         [FromQuery] int priority = 1,
         [FromQuery] DateTimeOffset? notBeforeUtc = null,
         CancellationToken ct = default)
@@ -319,7 +354,7 @@ private static bool IsUniqueViolation(DbUpdateException ex)
     [HttpDelete("async/numero/{numero:int}")]
     public async Task<IActionResult> EliminarNivelPorNumeroAsync(
         int numero,
-        [FromQuery] string? queue = "default",
+        [FromQuery] string? queue = null,
         [FromQuery] int priority = 1,
         [FromQuery] DateTimeOffset? notBeforeUtc = null,
         CancellationToken ct = default)

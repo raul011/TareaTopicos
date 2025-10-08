@@ -462,20 +462,6 @@ public async Task<IActionResult> MoveTasks(
 
     return Ok(new { from, to, moved });
 }
-// // AdminController.cs
-// [ApiController]
-// [Route("admin")]
-// public class AdminController : ControllerBase
-// {
-//     private readonly WorkerHost _workerHost;
-
-//     public AdminController(WorkerHost workerHost)
-//     {
-//         _workerHost = workerHost;
-//     }
-// POST http://localhost:5001/admin/queues?name=inscripciones&workers=5&processor=NivelProcessor
-// POST http://localhost:5001/admin/queues?name=usuarios&workers=3&processor=DefaultProcessor
-
     // =======================
     // CREAR COLA ESPECIALIZADA
     // =======================
@@ -498,5 +484,38 @@ public async Task<IActionResult> MoveTasks(
         return Ok(new { name, workers, processor });
     }
 // }
+[HttpGet("queues/{name}/transactions")]
+public async Task<IActionResult> ListTransactions(string name, [FromQuery] int max = 50)
+{
+    var db = _mux.GetDatabase();
+    var priorities = _cfg.GetSection("Queues")
+        .Get<List<TAREATOPICOS.ServicioA.Options.QueueItemOptions>>()
+        ?.FirstOrDefault(q => (q.Name ?? "default") == name)?.Priorities ?? 3;
+
+    var result = new List<object>();
+
+    for (int p = 0; p < priorities; p++)
+    {
+        var key = $"q:{name}:p:{p}";
+        var vals = await db.ListRangeAsync(key, 0, max - 1);
+        foreach (var v in vals)
+        {
+            if (v.HasValue)
+            {
+                try
+                {
+                    var tx = System.Text.Json.JsonSerializer.Deserialize<Transaccion>(v.ToString()!);
+                    result.Add(new { priority = p, tx });
+                }
+                catch
+                {
+                    result.Add(new { priority = p, raw = v.ToString() });
+                }
+            }
+        }
+    }
+
+    return Ok(new { queue = name, transactions = result });
+}
 
 }
