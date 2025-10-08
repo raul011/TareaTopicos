@@ -188,7 +188,7 @@ public sealed class InscripcionCompletaProcessor : IProcessor
             // 6. EJECUCIÓN: Crear la inscripción y sus detalles
             if (esNuevaInscripcion)
             {
-                inscripcion = new Inscripcion { Fecha = DateTime.UtcNow, Estado = "PENDIENTE", EstudianteId = estudiante.Id, PeriodoId = periodo.Id, Detalles = detallesValidos };
+                inscripcion = new Inscripcion { Fecha = DateTime.UtcNow, Estado = "confirmada", EstudianteId = estudiante.Id, PeriodoId = periodo.Id, Detalles = detallesValidos };
                 context.Inscripciones.Add(inscripcion);
             }
             else
