@@ -12,7 +12,7 @@ public class Transaccion
 
     
     public string? Payload { get; set; }
-  public string Estado { get; set; } = "EN_COLA";
+  public string Estado { get; set; } = "SEAT_REQUESTED";
  public int Attempt { get; set; } = 0;
 
  

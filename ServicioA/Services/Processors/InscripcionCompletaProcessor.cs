@@ -27,7 +27,7 @@ public sealed class InscripcionCompletaProcessor : IProcessor
 
     public async Task ProcessAsync(Transaccion tx, CancellationToken ct)
     {
-        if (await _guard.IsProcessedAsync(tx.Id, ct))
+        if (await _guard.IsProcessedAsync(tx.IdempotencyKey!, ct))
         {
             _logger.LogInformation("Tx {TxId} de InscripcionCompleta ya fue procesada (idempotente).", tx.Id);
             return;
@@ -123,10 +123,12 @@ public sealed class InscripcionCompletaProcessor : IProcessor
                     continue; // Ya está inscrito, simplemente omitir y continuar.
                 }
 
-                var inscritos = await context.DetallesInscripciones.CountAsync(d => d.GrupoMateriaId == grupo.Id, ct);
-                if (inscritos >= grupo.Cupo)
+                var rows = await context.Database.ExecuteSqlRawAsync(
+                     "UPDATE \"GruposMaterias\" SET \"Cupo\" = \"Cupo\" - 1 WHERE \"Id\" = {0} AND \"Cupo\" > 0", grupo.Id);
+
+                if (rows == 0)
                 {
-                    erroresGrupo.Add($"Sin cupo en {grupo.Materia.Codigo}-{grupo.Grupo}. (Cupo: {grupo.Cupo}, Inscritos: {inscritos})");
+                    erroresGrupo.Add($"Sin cupo en {grupo.Materia.Codigo}-{grupo.Grupo} (ya no quedan asientos).");
                     grupoValido = false;
                 }
 
@@ -180,15 +182,31 @@ public sealed class InscripcionCompletaProcessor : IProcessor
             }
 
             // 5. CREAR DETALLES VÁLIDOS
-            foreach (var grupo in gruposValidos)
-            {
-                detallesValidos.Add(new DetalleInscripcion { Codigo = $"{grupo.Materia.Codigo}-{grupo.Grupo}", Estado = "INSCRITO", GrupoMateriaId = grupo.Id });
-            }
+            // 5. CREAR DETALLES VÁLIDOS
+                foreach (var grupo in gruposMateria)
+                {
+                    if (gruposValidos.Contains(grupo))
+                    {
+                        detallesValidos.Add(new DetalleInscripcion {
+                            Codigo = $"{grupo.Materia.Codigo}-{grupo.Grupo}",
+                            Estado = "SEAT_CONFIRMED",
+                            GrupoMateriaId = grupo.Id
+                        });
+                    }
+                    else
+                    {
+                        detallesValidos.Add(new DetalleInscripcion {
+                            Codigo = $"{grupo.Materia.Codigo}-{grupo.Grupo}",
+                            Estado = "SEAT_REJECTED",
+                            GrupoMateriaId = grupo.Id
+                        });
+                    }
+                }
 
             // 6. EJECUCIÓN: Crear la inscripción y sus detalles
             if (esNuevaInscripcion)
             {
-                inscripcion = new Inscripcion { Fecha = DateTime.UtcNow, Estado = "confirmada", EstudianteId = estudiante.Id, PeriodoId = periodo.Id, Detalles = detallesValidos };
+                inscripcion = new Inscripcion { Fecha = DateTime.UtcNow, Estado = "SEAT_CONFIRMED", EstudianteId = estudiante.Id, PeriodoId = periodo.Id, Detalles = detallesValidos };
                 context.Inscripciones.Add(inscripcion);
             }
             else
@@ -203,8 +221,26 @@ public sealed class InscripcionCompletaProcessor : IProcessor
             await context.SaveChangesAsync(ct);
             await dbTransaction.CommitAsync(ct);
 
+            if (!string.IsNullOrEmpty(tx.CallbackUrl))
+                {
+                    var resultados = dto.MateriaGrupoCodigos.Select(codigo => {
+                        var detalle = detallesValidos.FirstOrDefault(d => d.Codigo == codigo);
+                        return new {
+                            codigo,
+                            estado = detalle?.Estado ?? "SEAT_REJECTED"
+                        };
+                    });
+
+                    var cb = scope.ServiceProvider.GetRequiredService<CallbackService>();
+                    await cb.SendAsync(tx.CallbackUrl, new {
+                        requestId = tx.Id,
+                        estado = inscripcion.Estado,
+                        resultados
+                    }, ct);
+                }
+
             _logger.LogInformation("✅ Inscripción completa creada exitosamente para Tx {TxId}", tx.Id);
-            await _guard.MarkProcessedAsync(tx.Id, ct);
+            await _guard.MarkProcessedAsync(tx.IdempotencyKey!, ct);
         }
         catch (Exception ex)
         {

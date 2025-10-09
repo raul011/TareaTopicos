@@ -42,14 +42,18 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
             var workers = Math.Max(1, q.GetValue<int?>("Workers") ?? 1);
 
             // Por defecto usa DefaultProcessor
-            _queueProcessors[name] = "DefaultProcessor";
+            //_queueProcessors[name] = "DefaultProcessor";
+            _queueProcessors[name] = "InscripcionCompletaProcessor";
 
             var pool = new WorkerPool(name, CreateWorker, _sp.GetRequiredService<ILogger<WorkerPool>>());
             pool.SetConcurrency(workers);
             _pools[name] = pool;
 
-            _logger.LogInformation("WorkerHost: cola {Name} iniciada con {Workers} hilos (processor: DefaultProcessor)",
-                name, workers);
+            //_logger.LogInformation("WorkerHost: cola {Name} iniciada con {Workers} hilos (processor: DefaultProcessor)",
+            //    name, workers);
+
+            _logger.LogInformation("WorkerHost: cola {Name} iniciada con {Workers} hilos (processor: {Processor})",
+                name, workers, _queueProcessors[name]);
         }
 
         return Task.CompletedTask;
@@ -88,6 +92,7 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
             proc = procName switch
             {
                 "NivelProcessor"   => sp.GetRequiredService<NivelProcessor>(),
+                "InscripcionCompletaProcessor"=> sp.GetRequiredService<InscripcionCompletaProcessor>(),
                 _                  => sp.GetRequiredService<DefaultProcessor>()
             };
         }

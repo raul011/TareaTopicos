@@ -165,7 +165,7 @@ public class InscripcionesController : ControllerBase
                     var detalle = new DetalleInscripcion
                     {
                         Codigo = $"{grupo.Materia.Codigo}-{grupo.Grupo}",
-                        Estado = "INSCRITO",
+                        Estado = "SEAT_CONFIRMED",
                         GrupoMateriaId = grupo.Id,
                         InscripcionId = 0 // Se asignará después
                     };
@@ -379,7 +379,7 @@ public class InscripcionesController : ControllerBase
                     detallesValidos.Add(new DetalleInscripcion
                     {
                         Codigo = $"{grupo.Materia.Codigo}-{grupo.Grupo}",
-                        Estado = "INSCRITO",
+                        Estado = "SEAT_CONFIRMED",
                         GrupoMateriaId = grupo.Id
                     });
                 }
@@ -393,7 +393,7 @@ public class InscripcionesController : ControllerBase
                 inscripcion = new Inscripcion
                 {
                     Fecha = DateTime.UtcNow,
-                    Estado = "PENDIENTE",
+                    Estado = "SEAT_REQUESTED",
                     EstudianteId = estudiante.Id,
                     PeriodoId = periodo.Id,
                     Detalles = detallesValidos
@@ -437,7 +437,7 @@ public class InscripcionesController : ControllerBase
             Entidad = "InscripcionCompleta", // Nuevo tipo de entidad para el procesador
             TipoOperacion = "Crear",
             Payload = JsonSerializer.Serialize(dto),
-            Estado = "EN_COLA",
+            Estado = "SEAT_REQUESTED",
             Priority = 1, // Prioridad media por defecto
             NotBefore = DateTimeOffset.UtcNow,
             CallbackUrl = _cfg["Webhook:DefaultUrl"],
@@ -547,7 +547,7 @@ public class InscripcionesController : ControllerBase
         var detalle = new DetalleInscripcion
         {
             Codigo = $"{grupoMateria.Materia.Codigo}-{grupoMateria.Grupo}",
-            Estado = "INSCRITO",
+            Estado = "SEAT_CONFIRMED",
             InscripcionId = id,
             GrupoMateriaId = dto.GrupoMateriaId
         };

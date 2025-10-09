@@ -97,8 +97,8 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor
 
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
-                           TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();                           
-
+                           TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();    
+builder.Services.AddScoped<InscripcionCompletaProcessor>();
 // Router (IQueueProcessor) → DefaultProcessor
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IQueueProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.DefaultProcessor>();
@@ -166,7 +166,6 @@ builder.Services.AddAuthorization();
 
  
 // Tu registro de colas/servicios propios
-builder.Services.AddServicioAQueues(builder.Configuration);
 // WorkerHost: como Singleton e IHostedService
 builder.Services.AddSingleton<WorkerHost>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WorkerHost>());
