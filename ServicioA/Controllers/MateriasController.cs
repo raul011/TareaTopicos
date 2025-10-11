@@ -72,6 +72,77 @@ public class MateriasController : ControllerBase
         });
     }
 
+[HttpGet("{materiaCodigo}/grupos")]
+public async Task<ActionResult> GetGruposPorMateria(string materiaCodigo, CancellationToken ct = default)
+{
+    _logger.LogInformation($"📥 GET /api/materias/{materiaCodigo}/grupos");
+
+    var materia = await _db.Materias
+        .AsNoTracking()
+        .FirstOrDefaultAsync(m => m.Codigo == materiaCodigo, ct);
+
+    if (materia is null)
+    {
+        _logger.LogWarning($"⚠️ Materia {materiaCodigo} no encontrada");
+        return NotFound(new { mensaje = $"Materia código {materiaCodigo} no encontrada" });
+    }
+
+    var grupos = await _db.GruposMaterias
+        .Include(g => g.Docente)
+        .Include(g => g.Aula)
+        .Include(g => g.Horario)
+        .Include(g => g.Periodo)
+        .Where(g => g.MateriaId == materia.Id) // ✅ corregido
+        .AsNoTracking()
+        .ToListAsync(ct);
+
+    _logger.LogInformation($"✅ Encontrados {grupos.Count} grupos para materia {materiaCodigo}");
+
+    var response = new
+    {
+        materia = new
+        {
+            materia.Id,
+            materia.Codigo,
+            materia.Nombre
+        },
+        grupos = grupos.Select(g => new
+        {
+            g.Id,
+            g.Grupo,
+            g.Cupo,
+            g.Estado,
+            docente = g.Docente == null ? null : new
+            {
+                g.Docente.Id,
+                g.Docente.Nombre,
+                g.Docente.Registro
+            },
+            aula = g.Aula == null ? null : new
+            {
+                g.Aula.Id,
+                g.Aula.Codigo,
+                g.Aula.Ubicacion
+            },
+            horario = g.Horario == null ? null : new
+            {
+                g.Horario.Id,
+                g.Horario.Dia,
+                HoraInicio = g.Horario.HoraInicio.ToString("HH:mm"),
+                HoraFin = g.Horario.HoraFin.ToString("HH:mm")
+            },
+            periodo = g.Periodo == null ? null : new
+            {
+                g.Periodo.Id,
+                g.Periodo.Gestion
+            }
+        })
+    };
+
+    return Ok(response);
+}
+
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<MateriaRequestDto>> GetById(int id, CancellationToken ct = default)
     {

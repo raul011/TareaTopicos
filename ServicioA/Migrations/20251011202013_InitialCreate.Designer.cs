@@ -12,7 +12,7 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20251011162142_InitialCreate")]
+    [Migration("20251011202013_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1211,7 +1211,7 @@ namespace ServicioA.Migrations
                             Cupo = 5,
                             DocenteId = 1,
                             Estado = "ACTIVO",
-                            Grupo = "A",
+                            Grupo = "SA",
                             HorarioId = 1,
                             MateriaId = 1,
                             PeriodoId = 1
@@ -1219,6 +1219,18 @@ namespace ServicioA.Migrations
                         new
                         {
                             Id = 2,
+                            AulaId = 1,
+                            Cupo = 5,
+                            DocenteId = 1,
+                            Estado = "ACTIVO",
+                            Grupo = "SB",
+                            HorarioId = 1,
+                            MateriaId = 1,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
                             AulaId = 2,
                             Cupo = 5,
                             DocenteId = 2,

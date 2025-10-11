@@ -580,8 +580,9 @@ namespace ServicioA.Migrations
                 columns: new[] { "Id", "AulaId", "Cupo", "DocenteId", "Estado", "Grupo", "HorarioId", "MateriaId", "PeriodoId" },
                 values: new object[,]
                 {
-                    { 1, 1, 5, 1, "ACTIVO", "A", 1, 1, 1 },
-                    { 2, 2, 5, 2, "ACTIVO", "B", 2, 2, 1 }
+                    { 1, 1, 5, 1, "ACTIVO", "SA", 1, 1, 1 },
+                    { 2, 1, 5, 1, "ACTIVO", "SB", 1, 1, 1 },
+                    { 3, 2, 5, 2, "ACTIVO", "B", 2, 2, 1 }
                 });
 
             migrationBuilder.InsertData(
