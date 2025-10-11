@@ -18,47 +18,25 @@ namespace TAREATOPICOS.ServicioA.Services
             _logger = logger;
         }
 
-        public async Task<bool> SendAsync(Transaccion tx, string status, CancellationToken ct)
-        {
-            if (string.IsNullOrWhiteSpace(tx.CallbackUrl)) return true;
+        public async Task<bool> SendAsync(string url, object payload, CancellationToken ct)
+{
+    if (string.IsNullOrWhiteSpace(url)) return true;
 
-            var evt = new CallbackEvent
-            {
-                TransactionId = tx.Id,
-                Status = status,
-                Entity = tx.Entidad,
-                Operation = tx.TipoOperacion,
-                Payload = tx.Payload ?? string.Empty,
-                Attempt = tx.Attempt
-            };
+    var body = JsonSerializer.Serialize(payload);
+    using var req = new HttpRequestMessage(HttpMethod.Post, url);
+    req.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
-            var body = JsonSerializer.Serialize(evt);
-            using var req = new HttpRequestMessage(HttpMethod.Post, tx.CallbackUrl);
-            req.Content = new StringContent(body, Encoding.UTF8, "application/json");
-
-            if (!string.IsNullOrWhiteSpace(tx.CallbackSecret))
-            {
-                using var h = new HMACSHA256(Encoding.UTF8.GetBytes(tx.CallbackSecret));
-                var sig = Convert.ToHexString(h.ComputeHash(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
-                req.Headers.Add("X-Signature", $"sha256={sig}");
-            }
-
-            if (!string.IsNullOrWhiteSpace(tx.IdempotencyKey))
-                req.Headers.TryAddWithoutValidation("Idempotency-Key", tx.IdempotencyKey);
-
-            // El timeout ya lo configuraste en Program.cs al registrar el HttpClient con Polly.
-
-            try
-            {
-                var resp = await _http.SendAsync(req, ct);
-                _logger.LogInformation("Callback → {Url} status {Code}", tx.CallbackUrl, (int)resp.StatusCode);
-                return resp.IsSuccessStatusCode;
-            }
-            catch (Exception ex)                               // 👈 aquí estaba el fallo
-            {
-                _logger.LogError(ex, "Callback → {Url} lanzó excepción", tx.CallbackUrl);
-                return false;
-            }
-        }
+    try
+    {
+        var resp = await _http.SendAsync(req, ct);
+        _logger.LogInformation("Callback → {Url} status {Code}", url, (int)resp.StatusCode);
+        return resp.IsSuccessStatusCode;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Callback → {Url} lanzó excepción", url);
+        return false;
+    }
+}
     }
 }

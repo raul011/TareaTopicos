@@ -440,7 +440,8 @@ public class InscripcionesController : ControllerBase
             Estado = "SEAT_REQUESTED",
             Priority = 1, // Prioridad media por defecto
             NotBefore = DateTimeOffset.UtcNow,
-            CallbackUrl = _cfg["Webhook:DefaultUrl"],
+            //CallbackUrl = _cfg["Webhook:DefaultUrl"],
+            CallbackUrl = dto.CallbackUrl ?? _cfg["Webhook:DefaultUrl"],
             CallbackSecret = _cfg["Webhook:DefaultSecret"],
             IdempotencyKey = Guid.NewGuid().ToString() // Clave única para esta operación
         };

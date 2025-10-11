@@ -1,0 +1,16 @@
+POST http://localhost:5000/api/inscripciones-sync/async/completa
+
+{
+  "estudianteRegistro": "20210001",
+  "periodoGestion": "2025-2",
+  "materiaGrupoCodigos": ["MAT101-A", "MAT202-B", "MAT303-C"],
+  "callbackUrl": "http://localhost:5001/webhook/sink"
+}
+
+
+//respuesta inmediata
+
+{
+  "transaccionId": "c6f1e2d3-1234-4567-890a-bcdef1234567",
+  "estado": "SEAT_REQUESTED"
+}

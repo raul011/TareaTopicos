@@ -12,7 +12,7 @@ namespace TAREATOPICOS.ServicioA.Services.Processors;
 /// Procesa una solicitud de inscripción completa de forma asíncrona.
 /// La lógica es una réplica del endpoint síncrono para mantener la consistencia.
 /// </summary>
-public sealed class InscripcionCompletaProcessor : IProcessor
+public sealed class InscripcionCompletaProcessor : IQueueProcessor, IProcessor
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IIdempotencyGuard _guard;
@@ -27,7 +27,7 @@ public sealed class InscripcionCompletaProcessor : IProcessor
 
     public async Task ProcessAsync(Transaccion tx, CancellationToken ct)
     {
-        if (await _guard.IsProcessedAsync(tx.IdempotencyKey!, ct))
+        if (await _guard.IsProcessedAsync(tx.Id, ct))
         {
             _logger.LogInformation("Tx {TxId} de InscripcionCompleta ya fue procesada (idempotente).", tx.Id);
             return;
@@ -232,7 +232,7 @@ public sealed class InscripcionCompletaProcessor : IProcessor
                     });
 
                     var cb = scope.ServiceProvider.GetRequiredService<CallbackService>();
-                    await cb.SendAsync(tx.CallbackUrl, new {
+                    await cb.SendAsync(tx.CallbackUrl!, new {
                         requestId = tx.Id,
                         estado = inscripcion.Estado,
                         resultados
@@ -240,7 +240,7 @@ public sealed class InscripcionCompletaProcessor : IProcessor
                 }
 
             _logger.LogInformation("✅ Inscripción completa creada exitosamente para Tx {TxId}", tx.Id);
-            await _guard.MarkProcessedAsync(tx.IdempotencyKey!, ct);
+            await _guard.MarkProcessedAsync(tx.Id, ct);
         }
         catch (Exception ex)
         {

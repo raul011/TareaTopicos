@@ -115,7 +115,11 @@ if (string.Equals(tx.Estado, "SKIP", StringComparison.OrdinalIgnoreCase))
     _logger.LogWarning("Tx {Tx} SKIP", tx.Id);
 
     // Callback SKIP (no debe mandar a DLQ si falla)
-    try { await _callback.SendAsync(tx, "SKIP", ct); }
+    try { await _callback.SendAsync(tx.CallbackUrl!, new {
+    requestId = tx.Id,
+    estado = "SKIPPED"
+}, ct);
+    }
     catch (Exception cbEx) { _logger.LogWarning(cbEx, "Callback SKIP falló para {Tx}", tx.Id); }
 
     continue; // pasa al siguiente mensaje
@@ -127,7 +131,10 @@ await _store.MarkFinalizadoAsync(tx.Id, DateTimeOffset.UtcNow, ct);
 _logger.LogInformation("Tx {Tx} COMPLETADO", tx.Id);
 
 // Callback OK (recomendado NO mandar a DLQ si el webhook falla)
-try { await _callback.SendAsync(tx, "OK", ct); }
+try { await _callback.SendAsync(tx.CallbackUrl!, new {
+    requestId = tx.Id,
+    estado = "PROCESSED"
+}, ct); }
 catch (Exception cbEx) { _logger.LogWarning(cbEx, "Callback OK falló para {Tx}", tx.Id); }
 
  
@@ -159,7 +166,11 @@ catch (Exception cbEx) { _logger.LogWarning(cbEx, "Callback OK falló para {Tx}"
                     await _store.UpdateEstadoAsync(tx.Id, "ERROR", ex.Message, ct);
                     await _store.MarkFinalizadoAsync(tx.Id, DateTimeOffset.UtcNow, ct); // <-- terminal
 //   Callback ERROR (no rompe la tx si falla)
-var okErr = await _callback.SendAsync(tx, "ERROR", ct);
+var okErr = await _callback.SendAsync(tx.CallbackUrl!, new {
+    requestId = tx.Id,
+    estado = "ERROR",
+    mensaje = ex.Message
+}, ct);
 if (!okErr)
 {
     await _dlq.SendToDlqAsync(_queueName, tx, new Exception("Webhook failed"), ct);
