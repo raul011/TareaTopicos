@@ -20,6 +20,15 @@ using System.Net;
 
 
 var builder = WebApplication.CreateBuilder(args);
+// === CORS ===
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy => policy
+            .WithOrigins("http://localhost:5173") // puerto de tu Vite
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -84,6 +93,10 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.Estudiante
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.EstudianteProcessor>();
 
+// Processor para Inscripcion (maneja POST/async)
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.InscripcionProcessor>();
+builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
+                           TAREATOPICOS.ServicioA.Services.Processors.InscripcionProcessor>();
 
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.PeriodoAcademicoProcessor>();
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
@@ -172,7 +185,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<WorkerHost>());
 
 var app = builder.Build();
 
-
+ 
 // 🚀 APLICAR MIGRACIONES AQUÍ (después de Build, antes de Run)
 // 👇 MIGRAR + SEED (dentro de Docker también)
 using (var scope = app.Services.CreateScope())
@@ -204,6 +217,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseRouting();
+
+// === CORS ===
+app.UseCors("AllowFrontend");
+
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

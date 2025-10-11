@@ -53,7 +53,7 @@ SELECT * FROM "GruposMaterias";
 SELECT * FROM "DetallesInscripciones";
 SELECT * FROM "Estudiantes";
 SELECT * FROM "Materias";
-
+SELECT * FROM "GruposMaterias";
 
 \x off : para tabla bonito
 
@@ -82,7 +82,22 @@ docker compose logs -f servicioa
 docker stop $(docker ps -q)
 
 
+Una vez dentro:
 
+En el panel izquierdo (Browser), haz clic derecho sobre Servers → Create → Server…
+
+En la pestaña General, escribe:
+
+Name: postgres_db (o cualquier nombre que quieras)
+
+En la pestaña Connection, completa así:
+
+Campo	Valor
+Host name/address	postgres_db
+Port	5432
+Maintenance database	universidad
+Username	postgres
+Password	1234
 
 
 Reset total
@@ -93,8 +108,9 @@ docker compose logs -f servicioa
 
 
 http://localhost:5001/queue-dashboard.html
-
- 
+BASE DE DATOS DE DOCKER
+http://localhost:5050/browser/
+ http://localhost:5001/swagger/index.html
 
  //para reiniciar si se cambia models
 rm -rf ServicioA/Migrations
@@ -103,7 +119,7 @@ docker compose down -v
 docker compose up -d --build
 
 
-
+?queue=cola1
 
 //Crear una cola llamada apache1 con 2 hilos
 POST http://localhost:5001/admin/queues/apache1?workers=2

@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ServicioA.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitFullReset : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -580,8 +580,8 @@ namespace ServicioA.Migrations
                 columns: new[] { "Id", "AulaId", "Cupo", "DocenteId", "Estado", "Grupo", "HorarioId", "MateriaId", "PeriodoId" },
                 values: new object[,]
                 {
-                    { 1, 1, 40, 1, "ACTIVO", "A", 1, 1, 1 },
-                    { 2, 2, 35, 2, "ACTIVO", "B", 2, 2, 1 }
+                    { 1, 1, 5, 1, "ACTIVO", "A", 1, 1, 1 },
+                    { 2, 2, 5, 2, "ACTIVO", "B", 2, 2, 1 }
                 });
 
             migrationBuilder.InsertData(

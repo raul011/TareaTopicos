@@ -1205,7 +1205,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 1,
                             AulaId = 1,
-                            Cupo = 40,
+                            Cupo = 5,
                             DocenteId = 1,
                             Estado = "ACTIVO",
                             Grupo = "A",
@@ -1217,7 +1217,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 2,
                             AulaId = 2,
-                            Cupo = 35,
+                            Cupo = 5,
                             DocenteId = 2,
                             Estado = "ACTIVO",
                             Grupo = "B",

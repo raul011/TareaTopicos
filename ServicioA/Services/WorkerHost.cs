@@ -1,4 +1,3 @@
- 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +9,7 @@ namespace TAREATOPICOS.ServicioA.Services;
 /// <summary>
 /// Orquesta pools por cola leyendo configuración ("Queues").
 /// Arranca al iniciar la app y detiene al apagar.
-/// Ahora soporta colas especializadas.
+/// Ahora soporta colas especializadas y expone el estado en ejecución.
 /// </summary>
 public sealed class WorkerHost : IHostedService, IAsyncDisposable
 {
@@ -23,6 +22,9 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
 
     private readonly object _lock = new();
 
+    // 🟢 Estado del host
+    private bool _isRunning = false;
+
     public WorkerHost(IServiceProvider sp, IConfiguration cfg, ILogger<WorkerHost> logger)
     {
         _sp = sp;
@@ -31,7 +33,7 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
     }
 
     // =======================
-    // START/STOP
+    // START / STOP
     // =======================
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -52,6 +54,8 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
                 name, workers);
         }
 
+        // ✅ Marcamos el host como corriendo
+        _isRunning = true;
         return Task.CompletedTask;
     }
 
@@ -61,6 +65,9 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
             await pool.StopAsync();
         _pools.Clear();
         _queueProcessors.Clear();
+
+        // 🔴 Marcamos como detenido
+        _isRunning = false;
     }
 
     public async ValueTask DisposeAsync() => await StopAsync(CancellationToken.None);
@@ -73,12 +80,12 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
         var scope = _sp.CreateScope();
         var sp = scope.ServiceProvider;
 
-        var qm      = sp.GetRequiredService<QueueManager>();
-        var store   = sp.GetRequiredService<ITransaccionStore>();
-        var dlq     = sp.GetRequiredService<DeadLetterService>();
+        var qm = sp.GetRequiredService<QueueManager>();
+        var store = sp.GetRequiredService<ITransaccionStore>();
+        var dlq = sp.GetRequiredService<DeadLetterService>();
         var limiter = sp.GetRequiredService<RateLimiter>();
-        var logger  = sp.GetRequiredService<ILogger<WorkerService>>();
-        var cb      = sp.GetRequiredService<CallbackService>();
+        var logger = sp.GetRequiredService<ILogger<WorkerService>>();
+        var cb = sp.GetRequiredService<CallbackService>();
         var queueState = sp.GetRequiredService<QueueStateService>();
 
         // 👇 Buscar processor dinámico
@@ -87,8 +94,8 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
         {
             proc = procName switch
             {
-                "NivelProcessor"   => sp.GetRequiredService<NivelProcessor>(),
-                _                  => sp.GetRequiredService<DefaultProcessor>()
+                "NivelProcessor" => sp.GetRequiredService<NivelProcessor>(),
+                _ => sp.GetRequiredService<DefaultProcessor>()
             };
         }
         else
@@ -149,8 +156,9 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
         {
             if (!_pools.TryGetValue(name, out pool))
                 return false;
+
             _pools.Remove(name);
-            _queueProcessors.Remove(name); // quitar también processor
+            _queueProcessors.Remove(name);
         }
 
         await pool!.StopAsync();
@@ -158,35 +166,17 @@ public sealed class WorkerHost : IHostedService, IAsyncDisposable
         return true;
     }
 
-//     public async Task<bool> RemoveQueueAsync(string name)
-//     {
-//         WorkerPool? pool;
-//         lock (_lock)
-//         {
-//             if (!_pools.TryGetValue(name, out pool))
-//                 return false;
-//             _pools.Remove(name);
-//             _queueProcessors.Remove(name); // quitar también processor
-//         }
-// //  Antes de parar el pool, esperamos a que la cola esté vacía
-//     var db = _sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase();
-
-//     while (true)
-//     {
-//         long pending = 0;
-//         for (int p = 0; p <= 2; p++) // revisa todas las prioridades
-//         {
-//             var key = $"q:{name}:p:{p}";
-//             pending += await db.ListLengthAsync(key);
-//         }
-
-//         if (pending == 0) break; //  ya no quedan mensajes
-
-//         _logger.LogInformation("RemoveQueueAsync: cola {Name} aún tiene {Pending} mensajes, esperando...", name, pending);
-//         await Task.Delay(500); // espera medio segundo antes de reintentar
-//     }
-//         await pool!.StopAsync();
-//         _logger.LogInformation("WorkerHost: cola {Name} eliminada", name);
-//         return true;
-//     }
+    // =======================
+    // ESTADO DEL HOST
+    // =======================
+    /// <summary>
+    /// Devuelve true si el WorkerHost está corriendo y hay al menos una cola activa.
+    /// </summary>
+    public bool IsRunning()
+    {
+        lock (_lock)
+        {
+            return _isRunning && _pools.Any(p => p.Value.Concurrency > 0);
+        }
+    }
 }

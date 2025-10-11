@@ -1,20 +1,23 @@
+version: '3.9'
+
 services:
-  postgres:
+  postgres_db:
     image: postgres:16
-    container_name: universidad_db
+    container_name: postgres_db
+    restart: always
     environment:
-      POSTGRES_DB: universidad
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: universidad
     ports:
       - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d universidad"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7
@@ -32,18 +35,30 @@ services:
     build: ./ServicioA
     container_name: servicioa
     depends_on:
-      postgres:
+      postgres_db:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5000
-      ConnectionStrings__DefaultConnection: Host=postgres;Database=universidad;Username=postgres;Password=1234
+      ConnectionStrings__DefaultConnection: Host=postgres_db;Database=universidad;Username=postgres;Password=1234
       Redis__ConnectionString: redis:6379
-      SEED: "true" 
+      SEED: "true"
     ports:
       - "5001:5000"
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: pgadmin
+    restart: always
+    depends_on:
+      - postgres_db
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
 
 volumes:
   pgdata:

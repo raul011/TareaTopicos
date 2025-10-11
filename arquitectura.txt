@@ -5,7 +5,7 @@ ServicioA/
 │  ├─ NivelesController.cs
 │  ├─ ReadinessController.cs
 │  └─ TransaccionesController.cs
-
+│  └─ InscripcionesController.cs
 ├─ Data/
 │  └─ ServicioAContext.cs
 
@@ -13,14 +13,17 @@ ServicioA/
 │  └─ ServiceCollectionExtensions.cs
 
 ├─ Models/
-│  ├─ Nivel.cs
+│  ├─ Nivel.cs   // model de prueba lo dema mismo paso 
 │  ├─ QueueDescriptor.cs
 │  ├─ QueuesConfig.cs
 │  ├─ Transaccion.cs
 │  └─ WorkerDescriptor.cs
 │  └─ ProcessedMessage.cs
 │  └─ ProcessResult.cs
-
+│  └─ DetalleInscripcion.cs
+│  └─ GrupoMateria.cs
+│  └─ Estudiante.cs
+│  └─ PeriodoAcademico.cs
 ├─ Contracts/
 │  ├─ CallbackEvent.cs
 
@@ -33,20 +36,20 @@ ServicioA/
 │  │  ├─ DefaultProcessor.cs
 │  │  ├─ IProcessor.cs
 │  │  ├─ IQueueProcessor.cs
-│  │  └─ NivelProcessor.cs
+│  │  ├─ InscripcionProcessor.cs
+│  │  └─ NivelProcessor.cs  //archivo de prueba para model los demas igual 
 │  ├─ seeders/
 │  │  └─ ISeeder.cs
-│  ├─ QueueFullException.cs
-│  ├─ QueueOptions.cs
-│  ├─ ConfigWatcher.cs
 │  ├─ CallbackService.cs
-│  ├─ QueueStateService.cs
+│  ├─ ConfigWatcher.cs
 │  ├─ DeadLetterService.cs
 │  ├─ IBackgroundTaskQueue.cs
-│  ├─ IIdempotencyGuard.cs
 │  ├─ IdempotencyGuard.cs
+│  ├─ IIdempotencyGuard.cs
 │  ├─ ITransaccionStore.cs
+│  ├─ QueueFullException.cs
 │  ├─ QueueManager.cs
+│  ├─ QueueOptions.cs
 │  ├─ RateLimiter.cs
 │  ├─ RedisScaleBackplane.cs
 │  ├─ RedisTaskQueue.cs
