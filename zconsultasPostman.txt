@@ -68,7 +68,7 @@ SELECT * FROM "Niveles";
 SELECT * FROM "PeriodosAcademicos";
 SELECT * FROM "PlanMaterias";
 SELECT * FROM "PlanesEstudio";
-
+http://localhost:5001/simulador.html
 
 \x off : para tabla bonito
 
