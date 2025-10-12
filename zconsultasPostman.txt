@@ -42,18 +42,33 @@ Esto te listará todas las transacciones que tenés guardadas, algo como:
 Paso 3: Ver la transacción específica
 HGETALL tx:1972b5fe-03e9-4ade-81a9-025ae16dfd79
 
+Reset total
+docker compose down
+docker compose down -v
+docker compose up -d --build
+docker compose logs -f servicioa
 
 //BASE DE DefaultProcessor
-docker exec -it universidad_db psql -U postgres -d universidad
-SELECT * FROM "Niveles";            
+docker exec -it postgres_db psql -U postgres
+\c universidad
+\dt
+\! clear
+
 SELECT * FROM "Aulas";
-SELECT * FROM "Materias";
-SELECT * FROM "Inscripciones";
-SELECT * FROM "GruposMaterias";
+SELECT * FROM "Carreras";
 SELECT * FROM "DetallesInscripciones";
+SELECT * FROM "Docentes";
 SELECT * FROM "Estudiantes";
-SELECT * FROM "Materias";
 SELECT * FROM "GruposMaterias";
+SELECT * FROM "HistorialesAcademicos";
+SELECT * FROM "Horarios";
+SELECT * FROM "Inscripciones";
+SELECT * FROM "Materias";
+SELECT * FROM "Niveles";
+SELECT * FROM "PeriodosAcademicos";
+SELECT * FROM "PlanMaterias";
+SELECT * FROM "PlanesEstudio";
+
 
 \x off : para tabla bonito
 
@@ -100,17 +115,13 @@ Username	postgres
 Password	1234
 
 
-Reset total
-docker compose down
-docker compose down -v
-docker compose up -d --build
-docker compose logs -f servicioa
+
 
 
 http://localhost:5001/queue-dashboard.html
 BASE DE DATOS DE DOCKER
 http://localhost:5050/browser/
- http://localhost:5001/swagger/index.html
+http://localhost:5001/swagger/index.html
 
  //para reiniciar si se cambia models
 rm -rf ServicioA/Migrations

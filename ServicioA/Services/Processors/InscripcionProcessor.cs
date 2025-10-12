@@ -1,3 +1,299 @@
+// // using System.Text.Json;
+// // using Microsoft.EntityFrameworkCore;
+// // using TAREATOPICOS.ServicioA.Data;
+// // using TAREATOPICOS.ServicioA.Models;
+
+// // namespace TAREATOPICOS.ServicioA.Services.Processors;
+
+// // public sealed class InscripcionProcessor : IProcessor
+// // {
+// //     private readonly ServicioAContext _db;
+// //     private readonly ILogger<InscripcionProcessor> _log;
+
+// //     public InscripcionProcessor(ServicioAContext db, ILogger<InscripcionProcessor> log)
+// //     {
+// //         _db = db;
+// //         _log = log;
+// //     }
+
+// //     private record Payload(string Registro, int PeriodoId, List<MateriaGrupo> Materias);
+// //     private record MateriaGrupo(string MateriaCodigo, string Grupo);
+
+// // public async Task ProcessAsync(Transaccion tx, CancellationToken ct)
+// // {
+// //     _log.LogInformation("📥 Procesando Tx {TxId} tipo {Tipo}", tx.Id, tx.TipoOperacion);
+
+// //     await using var dbTx = await _db.Database.BeginTransactionAsync(ct);
+// //     try
+// //     {
+// //         if (string.IsNullOrWhiteSpace(tx.Payload))
+// //         {
+// //             Skip(tx, "Payload vacío o nulo");
+// //             return;
+// //         }
+
+// //         var payload = JsonSerializer.Deserialize<Payload>(tx.Payload);
+// //         if (payload == null)
+// //         {
+// //             Skip(tx, "Payload inválido para Inscripción");
+// //             return;
+// //         }
+
+// //         var estudiante = await _db.Estudiantes
+// //             .FirstOrDefaultAsync(e => e.Registro == payload.Registro, ct);
+
+// //         if (estudiante == null)
+// //         {
+// //             Skip(tx, $"Estudiante {payload.Registro} no encontrado");
+// //             return;
+// //         }
+
+// //         // Crear la inscripción base
+// //         var inscripcion = new Inscripcion
+// //         {
+// //             EstudianteId = estudiante.Id,
+// //             PeriodoId = payload.PeriodoId,
+// //             Fecha = DateTime.UtcNow,
+// //             Estado = "PENDIENTE"
+// //         };
+
+// //         _db.Inscripciones.Add(inscripcion);
+// //         await _db.SaveChangesAsync(ct);
+
+// //         int confirmadas = 0;
+// //         int total = payload.Materias.Count;
+
+// //         foreach (var m in payload.Materias)
+// //         {
+// //             var grupo = await _db.GruposMaterias
+// //                 .Include(g => g.Materia)
+// //                 .FirstOrDefaultAsync(g =>
+// //                     g.Materia.Codigo == m.MateriaCodigo &&
+// //                     g.Grupo == m.Grupo &&
+// //                     g.PeriodoId == payload.PeriodoId, ct);
+
+// //             if (grupo == null)
+// //             {
+// //                 _log.LogWarning("⚠️ Grupo no encontrado para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
+// //                 continue;
+// //             }
+
+// //             // Verificar cupos reales
+// //             int inscritos = await _db.DetallesInscripciones
+// //                 .CountAsync(d => d.GrupoMateriaId == grupo.Id, ct);
+
+// //             if (inscritos >= grupo.Cupo)
+// //             {
+// //                 _log.LogWarning("❌ Sin cupos disponibles para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
+// //                 continue;
+// //             }
+
+// //             // Crear detalle de inscripción
+// //             var detalle = new DetalleInscripcion
+// //             {
+// //                 Codigo = $"{m.MateriaCodigo}-{m.Grupo}-{inscripcion.Id}",
+// //                 Estado = "INSCRITO",
+// //                 InscripcionId = inscripcion.Id,
+// //                 GrupoMateriaId = grupo.Id,
+// //                 NotaFinal = null
+// //             };
+// //             _db.DetallesInscripciones.Add(detalle);
+
+// //             // 🔽 Descontar cupo
+// //             if (grupo.Cupo > 0)
+// //             {
+// //                 grupo.Cupo -= 1;
+// //                 _db.GruposMaterias.Update(grupo);
+
+// //                 _log.LogInformation("📉 Cupo actualizado para {MateriaCodigo}-{Grupo}: nuevo cupo = {NuevoCupo}",
+// //                     m.MateriaCodigo, m.Grupo, grupo.Cupo);
+// //             }
+
+// //             confirmadas++;
+// //         }
+
+// //         // Actualizar estado final de la inscripción
+// //         inscripcion.Estado = confirmadas switch
+// //         {
+// //             0 => "RECHAZADA",
+// //             var c when c < total => "PARCIAL",
+// //             _ => "CONFIRMADA"
+// //         };
+
+// //         await _db.SaveChangesAsync(ct);
+// //         await dbTx.CommitAsync(ct);
+
+// //         // Actualizar estado de la transacción
+// //         tx.Estado = inscripcion.Estado switch
+// //         {
+// //             "CONFIRMADA" => "OK",
+// //             "PARCIAL" => "OK_PARTIAL",
+// //             "RECHAZADA" => "REJECTED",
+// //             _ => "COMPLETADO"
+// //         };
+
+// //         _log.LogInformation("✅ Tx {TxId} procesada ({Confirmadas}/{Total}) → {EstadoFinal}",
+// //             tx.Id, confirmadas, total, inscripcion.Estado);
+// //     }
+// //     catch (Exception ex)
+// //     {
+// //         await dbTx.RollbackAsync(ct);
+// //         tx.Estado = "ERROR";
+// //         _log.LogError(ex, "💥 Error procesando inscripción Tx={TxId}", tx.Id);
+// //     }
+// // }
+
+
+// //     private void Skip(Transaccion tx, string motivo)
+// //     {
+// //         tx.Estado = "SKIP";
+// //         _log.LogWarning("⚠️ Tx {TxId} omitida: {Motivo}", tx.Id, motivo);
+// //     }
+// // }
+// using System.Text.Json;
+// using Microsoft.EntityFrameworkCore;
+// using TAREATOPICOS.ServicioA.Data;
+// using TAREATOPICOS.ServicioA.Models;
+
+// namespace TAREATOPICOS.ServicioA.Services.Processors;
+
+// public sealed class InscripcionProcessor : IProcessor
+// {
+//     private readonly ServicioAContext _db;
+//     private readonly ILogger<InscripcionProcessor> _log;
+
+//     public InscripcionProcessor(ServicioAContext db, ILogger<InscripcionProcessor> log)
+//     {
+//         _db = db;
+//         _log = log;
+//     }
+
+//     private record Payload(string Registro, int PeriodoId, List<MateriaGrupo> Materias);
+//     private record MateriaGrupo(string MateriaCodigo, string Grupo);
+
+//     public async Task ProcessAsync(Transaccion tx, CancellationToken ct)
+//     {
+//         _log.LogInformation("📥 Procesando Tx {TxId} tipo {Tipo}", tx.Id, tx.TipoOperacion);
+
+//         await using var dbTx = await _db.Database.BeginTransactionAsync(ct);
+//         try
+//         {
+//             if (string.IsNullOrWhiteSpace(tx.Payload))
+//             {
+//                 Skip(tx, "Payload vacío o nulo");
+//                 return;
+//             }
+
+//             var payload = JsonSerializer.Deserialize<Payload>(tx.Payload);
+//             if (payload == null)
+//             {
+//                 Skip(tx, "Payload inválido para Inscripción");
+//                 return;
+//             }
+
+//             var estudiante = await _db.Estudiantes
+//                 .FirstOrDefaultAsync(e => e.Registro == payload.Registro, ct);
+
+//             if (estudiante == null)
+//             {
+//                 Skip(tx, $"Estudiante {payload.Registro} no encontrado");
+//                 return;
+//             }
+
+//             // Crear la inscripción base
+//             var inscripcion = new Inscripcion
+//             {
+//                 EstudianteId = estudiante.Id,
+//                 PeriodoId = payload.PeriodoId,
+//                 Fecha = DateTime.UtcNow,
+//                 Estado = "PENDIENTE"
+//             };
+
+//             _db.Inscripciones.Add(inscripcion);
+//             await _db.SaveChangesAsync(ct);
+
+//             int confirmadas = 0;
+//             int total = payload.Materias.Count;
+
+//             foreach (var m in payload.Materias)
+//             {
+//                 var grupo = await _db.GruposMaterias
+//                     .Include(g => g.Materia)
+//                     .FirstOrDefaultAsync(g =>
+//                         g.Materia.Codigo == m.MateriaCodigo &&
+//                         g.Grupo == m.Grupo &&
+//                         g.PeriodoId == payload.PeriodoId, ct);
+
+//                 if (grupo == null)
+//                 {
+//                     _log.LogWarning("⚠️ Grupo no encontrado para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
+//                     continue;
+//                 }
+
+//                 // Verificar si aún hay cupos disponibles
+//                 if (grupo.Cupo <= 0)
+//                 {
+//                     _log.LogWarning("❌ Sin cupos disponibles para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
+//                     continue;
+//                 }
+
+//                 // Crear detalle de inscripción
+//                 var detalle = new DetalleInscripcion
+//                 {
+//                     Codigo = $"{m.MateriaCodigo}-{m.Grupo}-{inscripcion.Id}",
+//                     Estado = "INSCRITO",
+//                     InscripcionId = inscripcion.Id,
+//                     GrupoMateriaId = grupo.Id,
+//                     NotaFinal = null
+//                 };
+//                 _db.DetallesInscripciones.Add(detalle);
+//                 confirmadas++;
+
+//                 // 🔽 Descontar cupo disponible físicamente
+//                 grupo.Cupo -= 1;
+//                 _db.GruposMaterias.Update(grupo);
+
+//                 _log.LogInformation("📉 Cupo actualizado para {MateriaCodigo}-{Grupo}: nuevo cupo = {NuevoCupo}",
+//                     m.MateriaCodigo, m.Grupo, grupo.Cupo);
+//             }
+
+//             // Actualizar estado final de la inscripción
+//             inscripcion.Estado = confirmadas switch
+//             {
+//                 0 => "RECHAZADA",
+//                 var c when c < total => "PARCIAL",
+//                 _ => "CONFIRMADA"
+//             };
+
+//             await _db.SaveChangesAsync(ct);
+//             await dbTx.CommitAsync(ct);
+
+//             // Actualizar estado de la transacción
+//             tx.Estado = inscripcion.Estado switch
+//             {
+//                 "CONFIRMADA" => "OK",
+//                 "PARCIAL" => "OK_PARTIAL",
+//                 "RECHAZADA" => "REJECTED",
+//                 _ => "COMPLETADO"
+//             };
+
+//             _log.LogInformation("✅ Tx {TxId} procesada ({Confirmadas}/{Total}) → {EstadoFinal}",
+//                 tx.Id, confirmadas, total, inscripcion.Estado);
+//         }
+//         catch (Exception ex)
+//         {
+//             await dbTx.RollbackAsync(ct);
+//             tx.Estado = "ERROR";
+//             _log.LogError(ex, "💥 Error procesando inscripción Tx={TxId}", tx.Id);
+//         }
+//     }
+
+//     private void Skip(Transaccion tx, string motivo)
+//     {
+//         tx.Estado = "SKIP";
+//         _log.LogWarning("⚠️ Tx {TxId} omitida: {Motivo}", tx.Id, motivo);
+//     }
+// }
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TAREATOPICOS.ServicioA.Data;
@@ -16,42 +312,71 @@ public sealed class InscripcionProcessor : IProcessor
         _log = log;
     }
 
-    private record Payload(string Registro, int PeriodoId, List<MateriaGrupo> Materias);
-    private record MateriaGrupo(string MateriaCodigo, string Grupo);
+    // === Payload DTO ===
+    private sealed record PayloadInscripcion(
+        string Registro,
+        int PeriodoId,
+        List<MateriaGrupo> Materias,
+        int InscripcionId
+    );
 
+    private sealed record MateriaGrupo(string MateriaCodigo, string Grupo);
+
+    // === Procesamiento principal ===
     public async Task ProcessAsync(Transaccion tx, CancellationToken ct)
     {
-        _log.LogInformation("📥 Procesando Tx {TxId} tipo {Tipo}", tx.Id, tx.TipoOperacion);
+        _log.LogInformation("📥 Procesando Tx {TxId} ({Entidad})", tx.Id, tx.Entidad);
 
-        await using var dbTx = await _db.Database.BeginTransactionAsync(ct);
+        if (string.IsNullOrWhiteSpace(tx.Payload))
+        {
+            Skip(tx, "Payload vacío o nulo");
+            return;
+        }
+
+        PayloadInscripcion? payload;
         try
         {
-            var payload = JsonSerializer.Deserialize<Payload>(tx.Payload ?? "");
-            if (payload == null)
+            payload = JsonSerializer.Deserialize<PayloadInscripcion>(tx.Payload);
+        }
+        catch (Exception ex)
+        {
+            Skip(tx, $"Payload inválido: {ex.Message}");
+            return;
+        }
+
+        if (payload == null)
+        {
+            Skip(tx, "Payload nulo o sin formato válido");
+            return;
+        }
+
+        await using var dbTx = await _db.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            // 🔎 Buscar inscripción base (ya creada como PENDIENTE)
+            var inscripcion = await _db.Inscripciones
+                .Include(i => i.Detalles)
+                .FirstOrDefaultAsync(i => i.Id == payload.InscripcionId, ct);
+
+            if (inscripcion == null)
             {
-                Skip(tx, "Payload inválido para Inscripción");
+                Skip(tx, $"Inscripción base {payload.InscripcionId} no encontrada");
+                await dbTx.RollbackAsync(ct);
                 return;
             }
 
             var estudiante = await _db.Estudiantes
                 .FirstOrDefaultAsync(e => e.Registro == payload.Registro, ct);
+
             if (estudiante == null)
             {
-                Skip(tx, $"Estudiante {payload.Registro} no encontrado");
+                _log.LogWarning("⚠️ Estudiante {Registro} no encontrado", payload.Registro);
+                inscripcion.Estado = "RECHAZADA";
+                await _db.SaveChangesAsync(ct);
+                await dbTx.CommitAsync(ct);
                 return;
             }
-
-            // Crear la inscripción principal
-            var inscripcion = new Inscripcion
-            {
-                EstudianteId = estudiante.Id,
-                PeriodoId = payload.PeriodoId,
-                Fecha = DateTime.UtcNow,
-                Estado = "PENDIENTE"
-            };
-
-            _db.Inscripciones.Add(inscripcion);
-            await _db.SaveChangesAsync(ct);
 
             int confirmadas = 0;
             int total = payload.Materias.Count;
@@ -71,42 +396,35 @@ public sealed class InscripcionProcessor : IProcessor
                     continue;
                 }
 
-                // Verificar cupos disponibles (uso COUNT real para evitar desincronización)
-                int cuposActuales = await _db.DetallesInscripciones
-                    .CountAsync(d => d.GrupoMateriaId == grupo.Id, ct);
-
-                if (cuposActuales >= grupo.Cupo)
+                if (grupo.Cupo <= 0)
                 {
-                    _log.LogWarning("❌ Sin cupos disponibles para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
+                    _log.LogWarning("❌ Sin cupos para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
                     continue;
                 }
 
-                // Generar código único del detalle
-                string codigoDetalle = $"{m.MateriaCodigo}-{m.Grupo}-{inscripcion.Id}";
-
-                // Crear detalle
-                var detalle = new DetalleInscripcion
+                // Crear detalle si aún no existe
+                bool yaInscrito = inscripcion.Detalles.Any(d => d.GrupoMateriaId == grupo.Id);
+                if (!yaInscrito)
                 {
-                    Codigo = codigoDetalle,
-                    Estado = "INSCRITO",
-                    InscripcionId = inscripcion.Id,
-                    GrupoMateriaId = grupo.Id,
-                    NotaFinal = null
-                };
-                _db.DetallesInscripciones.Add(detalle);
+                    var detalle = new DetalleInscripcion
+                    {
+                        Codigo = $"{m.MateriaCodigo}-{m.Grupo}-{inscripcion.Id}",
+                        Estado = "INSCRITO",
+                        InscripcionId = inscripcion.Id,
+                        GrupoMateriaId = grupo.Id
+                    };
+                    _db.DetallesInscripciones.Add(detalle);
+                    confirmadas++;
 
-                // 🔽 Reducir cupo visual (opcional, pero útil para ver cambios en BD)
-                if (grupo.Cupo > 0)
-                {
                     grupo.Cupo -= 1;
-                    _log.LogInformation("📉 Cupo reducido para {MateriaCodigo}-{Grupo}: {CupoRestante}",
+                    _db.GruposMaterias.Update(grupo);
+
+                    _log.LogInformation("📉 Cupo actualizado {MateriaCodigo}-{Grupo}: nuevo cupo={NuevoCupo}",
                         m.MateriaCodigo, m.Grupo, grupo.Cupo);
                 }
-
-                confirmadas++;
             }
 
-            // Actualizar estado final de la inscripción
+            // 🟢 Actualizar estado final
             inscripcion.Estado = confirmadas switch
             {
                 0 => "RECHAZADA",
@@ -114,24 +432,33 @@ public sealed class InscripcionProcessor : IProcessor
                 _ => "CONFIRMADA"
             };
 
+            inscripcion.Fecha = DateTime.UtcNow; // Actualizamos la fecha también
             await _db.SaveChangesAsync(ct);
             await dbTx.CommitAsync(ct);
 
-            tx.Estado = "COMPLETADO";
-            _log.LogInformation("✅ Tx {TxId} procesada correctamente: {Confirmadas}/{Total} confirmadas",
-                tx.Id, confirmadas, total);
+            // 🔁 Actualizar estado de la transacción
+            tx.Estado = inscripcion.Estado switch
+            {
+                "CONFIRMADA" => "OK",
+                "PARCIAL" => "OK_PARTIAL",
+                "RECHAZADA" => "REJECTED",
+                _ => "COMPLETADO"
+            };
+
+            _log.LogInformation("✅ Tx {TxId} → Inscripción {Id} {Estado} ({Confirmadas}/{Total})",
+                tx.Id, inscripcion.Id, inscripcion.Estado, confirmadas, total);
         }
         catch (Exception ex)
         {
             await dbTx.RollbackAsync(ct);
-            _log.LogError(ex, "💥 Error procesando inscripción Tx={TxId}", tx.Id);
             tx.Estado = "ERROR";
+            _log.LogError(ex, "💥 Error procesando Tx {TxId}", tx.Id);
         }
     }
 
     private void Skip(Transaccion tx, string motivo)
     {
         tx.Estado = "SKIP";
-        _log.LogWarning("⚠️ Tx {TxId} marcada como SKIP: {Motivo}", tx.Id, motivo);
+        _log.LogWarning("⚠️ Tx {TxId} omitida: {Motivo}", tx.Id, motivo);
     }
 }

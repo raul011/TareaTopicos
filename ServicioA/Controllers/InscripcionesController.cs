@@ -15,19 +15,274 @@ public class InscripcionesController : ControllerBase
     private readonly QueueManager _qm;
     private readonly IConfiguration _cfg;
     private readonly ILogger<InscripcionesController> _log;
+private readonly ServicioAContext _context;
 
-    public InscripcionesController(QueueManager qm, IConfiguration cfg, ILogger<InscripcionesController> log)
+    public InscripcionesController(QueueManager qm, IConfiguration cfg,
+     ILogger<InscripcionesController> log,
+    ServicioAContext context)
     {
         _qm = qm;
         _cfg = cfg;
         _log = log;
+         _context = context;
     }
 
     // === DTOs ===
     public record MateriaGrupoDto(string MateriaCodigo, string Grupo);
     public record InscripcionCreateDto(string Registro, int PeriodoId, List<MateriaGrupoDto> Materias);
+    // ===========================================
+    // GET /api/inscripciones/materias-disponibles/{registro}
+    // ===========================================
+    [HttpGet("materias-disponibles/{registro}")]
+    public async Task<IActionResult> ObtenerMateriasDisponibles(
+        string registro,
+        [FromServices] ServicioAContext db)
+    {
+        registro = registro.Trim().ToUpperInvariant();
 
- // === POST /api/inscripciones/async ===
+        // Buscar estudiante
+        var estudiante = await db.Estudiantes
+            .Include(e => e.Carrera)
+            .FirstOrDefaultAsync(e => e.Registro.ToUpper() == registro);
+
+        if (estudiante == null)
+            return NotFound(new { mensaje = $"No se encontró estudiante con registro '{registro}'." });
+
+        // Buscar materias ya inscritas o cursadas
+        var cursadas = await db.Inscripciones
+            .Where(i => i.EstudianteId == estudiante.Id)
+            .SelectMany(i => i.Detalles)
+            .Select(d => d.GrupoMateria.MateriaId)
+            .Distinct()
+            .ToListAsync();
+
+        // Buscar materias del plan de la carrera que aún no cursó
+        var materiasPendientes = await db.PlanMaterias
+            .Include(pm => pm.Materia)
+            .Where(pm => pm.Plan.CarreraId == estudiante.CarreraId &&
+                         !cursadas.Contains(pm.MateriaId))
+            .Select(pm => new
+            {
+                pm.Materia.Codigo,
+                pm.Materia.Nombre,
+                pm.Materia.Creditos,
+                pm.Semestre
+            })
+            .OrderBy(pm => pm.Semestre)
+            .ToListAsync();
+
+        if (!materiasPendientes.Any())
+            return Ok(new { mensaje = "El estudiante ya cursó todas las materias del plan." });
+
+        return Ok(materiasPendientes);
+    }
+// ===========================================
+// GET /api/inscripciones/grupos/{materiaCodigo}
+// ===========================================
+[HttpGet("grupos/{materiaCodigo}")]
+public async Task<IActionResult> ObtenerGruposPorMateria(
+    string materiaCodigo,
+    [FromServices] ServicioAContext db)
+{
+    materiaCodigo = materiaCodigo.Trim().ToUpperInvariant();
+
+    // Buscar materia por código
+    var materia = await db.Materias
+        .FirstOrDefaultAsync(m => m.Codigo.ToUpper() == materiaCodigo);
+
+    if (materia == null)
+        return NotFound(new { mensaje = $"No se encontró la materia con código '{materiaCodigo}'." });
+
+    // Buscar los grupos activos de esa materia
+    var grupos = await db.GruposMaterias
+        .Include(g => g.Docente)
+        .Include(g => g.Horario)
+        .Include(g => g.Aula)
+        .Where(g => g.MateriaId == materia.Id && g.Estado == "ACTIVO")
+        .Select(g => new
+        {
+            g.Id,
+            g.Grupo,
+            Docente = g.Docente.Nombre,
+            Cupo = g.Cupo,
+            Aula = g.Aula != null ? g.Aula.Codigo : "SIN AULA",
+            Horario = g.Horario != null
+                ? $"{g.Horario.Dia} {g.Horario.HoraInicio:hh\\:mm} - {g.Horario.HoraFin:hh\\:mm}"
+                : "SIN HORARIO"
+        })
+        .OrderBy(g => g.Grupo)
+        .ToListAsync();
+
+    if (!grupos.Any())
+        return NotFound(new { mensaje = $"No hay grupos disponibles para la materia '{materia.Nombre}'." });
+
+    return Ok(new
+    {
+        Materia = materia.Nombre,
+        Codigo = materia.Codigo,
+        Grupos = grupos
+    });
+}
+
+
+// // ===========================================
+// // POST /api/inscripciones/async
+// // ===========================================
+// [HttpPost("async")]
+// public async Task<IActionResult> CrearAsync(
+//     [FromBody] InscripcionCreateDto dto,
+//     [FromQuery] string? queue = "default",
+//     [FromQuery] int priority = 1,
+//     [FromQuery] DateTimeOffset? notBeforeUtc = null,
+//     CancellationToken ct = default)
+// {
+//     // === Validaciones iniciales ===
+//     if (dto == null)
+//         return BadRequest(new { mensaje = "Falta el cuerpo de la solicitud (JSON vacío)." });
+//     if (string.IsNullOrWhiteSpace(dto.Registro))
+//         return BadRequest(new { mensaje = "El campo 'Registro' es obligatorio." });
+//     if (dto.PeriodoId <= 0)
+//         return BadRequest(new { mensaje = "El 'PeriodoId' debe ser mayor a 0." });
+//     if (dto.Materias == null || !dto.Materias.Any())
+//         return BadRequest(new { mensaje = "Debe incluir al menos una materia para inscribirse." });
+
+//     // === Normalización del payload ===
+//     var payloadObj = new
+//     {
+//         Registro = dto.Registro.Trim().ToUpperInvariant(),
+//         PeriodoId = dto.PeriodoId,
+//         Materias = dto.Materias.Select(m => new
+//         {
+//             MateriaCodigo = m.MateriaCodigo.Trim().ToUpperInvariant(),
+//             Grupo = m.Grupo.Trim().ToUpperInvariant()
+//         }).ToList()
+//     };
+
+//     try
+//     {
+//         // === Crear transacción asíncrona ===
+//         var tx = new Transaccion
+//         {
+//             TipoOperacion = "POST",
+//             Entidad = "Inscripcion",
+//             Payload = JsonSerializer.Serialize(payloadObj),
+//             Estado = "EN_COLA",                   // Estado interno de la transacción
+//             Priority = Math.Clamp(priority, 0, 2),
+//             NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+//             CallbackUrl = _cfg["Webhook:DefaultUrl"],
+//             CallbackSecret = _cfg["Webhook:DefaultSecret"],
+//             CreatedAt = DateTimeOffset.UtcNow,
+//             IdempotencyKey = $"{dto.Registro}-{dto.PeriodoId}-{Guid.NewGuid():N}"
+//         };
+
+//         // === Intentar encolarla ===
+//         await _qm.EnqueueAsync(tx, queue, ct);
+
+//         _log.LogInformation(
+//             "🟡 Nueva solicitud de inscripción encolada (TxId={TxId}, Registro={Registro}, Periodo={PeriodoId}, Materias={MateriasCount})",
+//             tx.Id, dto.Registro, dto.PeriodoId, dto.Materias.Count);
+
+//         // === Respuesta al cliente ===
+//         return Accepted(new
+//         {
+//             id = tx.Id,
+//             estado = "PENDIENTE",
+//             mensaje = "La solicitud de inscripción fue recibida y está pendiente de procesamiento.",
+//             periodo = dto.PeriodoId,
+//             materias = dto.Materias.Count
+//         });
+//     }
+//     catch (Exception ex)
+//     {
+//         _log.LogError(ex, "💥 Error al encolar la inscripción (Registro={Registro})", dto.Registro);
+
+//         // Si la cola o el sistema de mensajería falla:
+//         return StatusCode(503, new
+//         {
+//             mensaje = "El sistema de inscripción se encuentra temporalmente fuera de servicio. Intente nuevamente más tarde.",
+//             detalle = ex.Message
+//         });
+//     }
+// }
+//  // ===========================================
+// // POST /api/inscripciones/async
+// // ===========================================
+// [HttpPost("async")]
+// public async Task<IActionResult> CrearAsync(
+//     [FromBody] InscripcionCreateDto dto,
+//     [FromQuery] string? queue = "default",
+//     [FromQuery] int priority = 1,
+//     [FromQuery] DateTimeOffset? notBeforeUtc = null,
+//     CancellationToken ct = default)
+// {
+//     if (dto == null || string.IsNullOrWhiteSpace(dto.Registro) || dto.PeriodoId <= 0 ||
+//         dto.Materias == null || !dto.Materias.Any())
+//         return BadRequest(new { mensaje = "Registro, PeriodoId y al menos una materia son requeridos." });
+
+//     try
+//     {
+//         var tx = new Transaccion
+//         {
+//             TipoOperacion = "POST",
+//             Entidad = "Inscripcion",
+//             Payload = JsonSerializer.Serialize(dto),
+//             Estado = "EN_COLA",
+//             Priority = Math.Clamp(priority, 0, 2),
+//             NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+//             CallbackUrl = _cfg["Webhook:DefaultUrl"],
+//             CallbackSecret = _cfg["Webhook:DefaultSecret"],
+//             CreatedAt = DateTimeOffset.UtcNow,
+//             IdempotencyKey = $"{dto.Registro}-{dto.PeriodoId}-{Guid.NewGuid():N}"
+//         };
+
+//         await _qm.EnqueueAsync(tx, queue, ct);
+
+//         // 🔹 Guardar registro PENDIENTE visible inmediatamente
+//         var estudianteId = await _context.Estudiantes
+//             .Where(e => e.Registro == dto.Registro)
+//             .Select(e => e.Id)
+//             .FirstOrDefaultAsync(ct);
+
+//         if (estudianteId == 0)
+//             return NotFound(new { mensaje = $"Estudiante {dto.Registro} no encontrado." });
+
+//         var inscripcion = new Inscripcion
+//         {
+//             EstudianteId = estudianteId,
+//             PeriodoId = dto.PeriodoId,
+//             Fecha = DateTime.UtcNow,
+//             Estado = "PENDIENTE"
+//         };
+
+//         _context.Inscripciones.Add(inscripcion);
+//         await _context.SaveChangesAsync(ct);
+
+//         _log.LogInformation("🟡 Inscripción PENDIENTE visible (TxId={TxId}, Estudiante={Registro})", tx.Id, dto.Registro);
+
+//         return Ok(new
+//         {
+//             mensaje = "Solicitud encolada (pendiente de procesamiento).",
+//             estado = "PENDIENTE",
+//             transactionId = tx.Id,
+//             inscripcion = new
+//             {
+//                 id = inscripcion.Id,
+//                 registro = dto.Registro,
+//                 periodoId = dto.PeriodoId,
+//                 materias = dto.Materias.Select(m => new { codigo = m.MateriaCodigo, grupo = m.Grupo }),
+//                 fecha = inscripcion.Fecha
+//             }
+//         });
+//     }
+//     catch (Exception ex)
+//     {
+//         _log.LogError(ex, "💥 Error al crear inscripción asincrónica para {Registro}", dto.Registro);
+//         return StatusCode(500, new { mensaje = "Error interno del servidor.", detalle = ex.Message });
+//     }
+// }
+// ===========================================
+// POST /api/inscripciones/async
+// ===========================================
 [HttpPost("async")]
 public async Task<IActionResult> CrearAsync(
     [FromBody] InscripcionCreateDto dto,
@@ -36,22 +291,47 @@ public async Task<IActionResult> CrearAsync(
     [FromQuery] DateTimeOffset? notBeforeUtc = null,
     CancellationToken ct = default)
 {
-    if (dto == null || string.IsNullOrWhiteSpace(dto.Registro) || dto.PeriodoId <= 0 || dto.Materias == null || !dto.Materias.Any())
+    if (dto == null || string.IsNullOrWhiteSpace(dto.Registro) || dto.PeriodoId <= 0 ||
+        dto.Materias == null || !dto.Materias.Any())
         return BadRequest(new { mensaje = "Registro, PeriodoId y al menos una materia son requeridos." });
-
-    var payloadObj = new
-    {
-        Registro = dto.Registro.Trim().ToUpperInvariant(),
-        PeriodoId = dto.PeriodoId,
-        Materias = dto.Materias.Select(m => new
-        {
-            MateriaCodigo = m.MateriaCodigo.Trim().ToUpperInvariant(),
-            Grupo = m.Grupo.Trim().ToUpperInvariant()
-        }).ToList()
-    };
 
     try
     {
+        // 🔹 Buscar estudiante
+        var estudianteId = await _context.Estudiantes
+            .Where(e => e.Registro == dto.Registro)
+            .Select(e => e.Id)
+            .FirstOrDefaultAsync(ct);
+
+        if (estudianteId == 0)
+            return NotFound(new { mensaje = $"Estudiante {dto.Registro} no encontrado." });
+
+        // 🔹 Crear inscripción visible inmediatamente (PENDIENTE)
+        var inscripcion = new Inscripcion
+        {
+            EstudianteId = estudianteId,
+            PeriodoId = dto.PeriodoId,
+            Fecha = DateTime.UtcNow,
+            Estado = "PENDIENTE"
+        };
+
+        _context.Inscripciones.Add(inscripcion);
+        await _context.SaveChangesAsync(ct);
+
+        // 🔹 Armar payload con el Id recién creado
+        var payloadObj = new
+        {
+            Registro = dto.Registro.Trim().ToUpperInvariant(),
+            PeriodoId = dto.PeriodoId,
+            Materias = dto.Materias.Select(m => new
+            {
+                MateriaCodigo = m.MateriaCodigo.Trim().ToUpperInvariant(),
+                Grupo = m.Grupo.Trim().ToUpperInvariant()
+            }),
+            InscripcionId = inscripcion.Id   // 🔥 CLAVE: el Processor lo usará para actualizar
+        };
+
+        // 🔹 Crear transacción asíncrona
         var tx = new Transaccion
         {
             TipoOperacion = "POST",
@@ -61,49 +341,150 @@ public async Task<IActionResult> CrearAsync(
             Priority = Math.Clamp(priority, 0, 2),
             NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
             CallbackUrl = _cfg["Webhook:DefaultUrl"],
-            CallbackSecret = _cfg["Webhook:DefaultSecret"]
+            CallbackSecret = _cfg["Webhook:DefaultSecret"],
+            CreatedAt = DateTimeOffset.UtcNow,
+            IdempotencyKey = $"{dto.Registro}-{dto.PeriodoId}-{Guid.NewGuid():N}"
         };
 
         await _qm.EnqueueAsync(tx, queue, ct);
 
-        _log.LogInformation("Transacción de inscripción encolada. TxId={TxId}", tx.Id);
-        return Accepted(new { id = tx.Id, estado = tx.Estado });
+        _log.LogInformation("🟡 Inscripción PENDIENTE encolada (TxId={TxId}, Registro={Registro})", tx.Id, dto.Registro);
+
+        return Ok(new
+        {
+            mensaje = "Solicitud encolada (pendiente de procesamiento).",
+            estado = "PENDIENTE",
+            transactionId = tx.Id,
+            inscripcion = new
+            {
+                id = inscripcion.Id,
+                registro = dto.Registro,
+                periodoId = dto.PeriodoId,
+                materias = dto.Materias.Select(m => new { codigo = m.MateriaCodigo, grupo = m.Grupo }),
+                fecha = inscripcion.Fecha
+            }
+        });
     }
     catch (Exception ex)
     {
-        _log.LogError(ex, "Error al encolar inscripción");
-        return StatusCode(500, new { mensaje = "Error interno", detalle = ex.Message });
+        _log.LogError(ex, "💥 Error al crear inscripción asincrónica para {Registro}", dto.Registro);
+        return StatusCode(500, new
+        {
+            mensaje = "Error interno del servidor.",
+            detalle = ex.Message
+        });
     }
 }
-    
 
-[HttpGet("estado/{registro}")]
-public async Task<IActionResult> ObtenerEstado(string registro, [FromServices] ServicioAContext db)
+//  // ===========================================
+// // GET /api/inscripciones/estado-inscripcion/{registro}
+// // ===========================================
+// [HttpGet("estado-inscripcion/{registro}")]
+// public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServices] ServicioAContext db)
+// {
+//     if (string.IsNullOrWhiteSpace(registro))
+//         return BadRequest(new { mensaje = "El registro del estudiante es requerido." });
+
+//     registro = registro.Trim().ToUpperInvariant();
+//     _log.LogInformation("🔍 Consultando estado de inscripción del estudiante {Registro}", registro);
+
+//     var estudiante = await db.Estudiantes
+//         .AsNoTracking()
+//         .FirstOrDefaultAsync(e => e.Registro == registro);
+
+//     if (estudiante == null)
+//         return NotFound(new { mensaje = $"No existe estudiante con registro {registro}." });
+
+//     var inscripciones = await db.Inscripciones
+//         .AsNoTracking()
+//         .Include(i => i.Detalles)
+//             .ThenInclude(d => d.GrupoMateria)
+//                 .ThenInclude(g => g.Materia)
+//         .Where(i => i.EstudianteId == estudiante.Id)
+//         .OrderByDescending(i => i.Fecha)
+//         .Select(i => new
+//         {
+//             i.Id,
+//             i.Estado,
+//             i.Fecha,
+//             i.PeriodoId,
+//             Materias = i.Detalles.Select(d => new
+//             {
+//                 d.GrupoMateria.Materia.Codigo,
+//                 d.GrupoMateria.Materia.Nombre,
+//                 d.GrupoMateria.Grupo,
+//                 d.Estado
+//             })
+//         })
+//         .ToListAsync();
+
+//     if (!inscripciones.Any())
+//         return Ok(new { mensaje = "El estudiante no tiene inscripciones registradas." });
+
+//     _log.LogInformation("📋 {Cantidad} inscripciones encontradas para {Registro}", inscripciones.Count, registro);
+//     return Ok(inscripciones);
+// }
+// ===========================================
+// GET /api/inscripciones/estado-inscripcion/{registro}
+// ===========================================
+[HttpGet("estado-inscripcion/{registro}")]
+public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServices] ServicioAContext db)
 {
+    if (string.IsNullOrWhiteSpace(registro))
+        return BadRequest(new { mensaje = "El registro del estudiante es requerido." });
+
+    registro = registro.Trim().ToUpperInvariant();
+    _log.LogInformation("🔍 Consultando estado de inscripción del estudiante {Registro}", registro);
+
+    var estudiante = await db.Estudiantes
+        .AsNoTracking()
+        .FirstOrDefaultAsync(e => e.Registro == registro);
+
+    if (estudiante == null)
+        return NotFound(new { mensaje = $"No existe estudiante con registro {registro}." });
+
+    // 🧠 Importante: usar ToListAsync() antes del Select que contiene el array
     var inscripciones = await db.Inscripciones
+        .AsNoTracking()
         .Include(i => i.Detalles)
-        .ThenInclude(d => d.GrupoMateria)
-        .ThenInclude(g => g.Materia)
-        .Where(i => i.Estudiante.Registro == registro)
+            .ThenInclude(d => d.GrupoMateria)
+                .ThenInclude(g => g.Materia)
+        .Where(i => i.EstudianteId == estudiante.Id)
         .OrderByDescending(i => i.Fecha)
-        .Select(i => new {
-            i.Id,
-            i.Estado,
-            i.Fecha,
-            Materias = i.Detalles.Select(d => new {
+        .ToListAsync(); // ✅ materializamos primero en memoria
+
+    var resultado = inscripciones.Select(i => new
+    {
+        i.Id,
+        i.Estado,
+        i.Fecha,
+        i.PeriodoId,
+        Materias = i.Detalles.Any()
+            ? i.Detalles.Select(d => new
+            {
+                d.GrupoMateria.Materia.Codigo,
                 d.GrupoMateria.Materia.Nombre,
                 d.GrupoMateria.Grupo,
                 d.Estado
             })
-        })
-        .ToListAsync();
+            : new[]
+            {
+                new
+                {
+                    Codigo = "(pendiente)",
+                    Nombre = "(sin procesar)",
+                    Grupo = "-",
+                    Estado = "PENDIENTE"
+                }
+            }
+    }).ToList();
 
-    if (!inscripciones.Any())
-        return NotFound(new { mensaje = "No hay inscripciones para este estudiante" });
+    if (!resultado.Any())
+        return Ok(new { mensaje = "El estudiante no tiene inscripciones registradas." });
 
-    return Ok(inscripciones);
+    _log.LogInformation("📋 {Cantidad} inscripciones encontradas para {Registro}", resultado.Count, registro);
+    return Ok(resultado);
 }
-
 
 
 
