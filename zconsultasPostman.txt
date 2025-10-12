@@ -71,7 +71,11 @@ SELECT * FROM "PlanesEstudio";
 http://localhost:5001/simulador.html
 
 \x off : para tabla bonito
-
+SELECT "Id", "Entidad", "Estado", "Payload"
+FROM "Transacciones"
+WHERE "Entidad" = 'Inscripcion'
+ORDER BY "CreatedAt" DESC
+LIMIT 3;
 SELECT *
 FROM "Materias"
 WHERE "Codigo" = 'MAT-150';
@@ -167,3 +171,19 @@ POST http://localhost:5001/admin/queues?name=inscripciones&workers=5&processor=N
 
 
 
+
+
+GET http://localhost:5001/api/inscripciones/materias-disponibles/20251234
+GET http://localhost:5001/api/inscripciones/grupos/INF119
+POST http://localhost:5001/api/inscripciones/async
+{
+  "registro": "20251234",
+  "periodoId": 1,
+  "materias": [
+    {
+      "materiaCodigo": "MAT101",
+      "grupo": "A"
+    } 
+  ]
+}
+GET http://localhost:5001/api/inscripciones/estado-inscripcion/20251234

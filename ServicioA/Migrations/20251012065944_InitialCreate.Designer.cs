@@ -12,8 +12,8 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20251009142619_InitFullReset")]
-    partial class InitFullReset
+    [Migration("20251012065944_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2017,6 +2017,56 @@ namespace ServicioA.Migrations
                     b.HasKey("MessageId");
 
                     b.ToTable("ProcessedMessages");
+                });
+
+            modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.Transaccion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CallbackSecret")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CallbackUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Entidad")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasColumnType("text");
+
+                    b.Property<int>("MaxRetries")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("NotBefore")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TipoOperacion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Transacciones");
                 });
 
             modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.DetalleInscripcion", b =>

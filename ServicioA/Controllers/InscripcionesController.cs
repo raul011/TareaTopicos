@@ -189,7 +189,8 @@ public async Task<IActionResult> CrearAsync(
             CreatedAt = DateTimeOffset.UtcNow,
             IdempotencyKey = $"{dto.Registro}-{dto.PeriodoId}-{Guid.NewGuid():N}"
         };
-
+_context.Transacciones.Add(tx);
+await _context.SaveChangesAsync(ct);
         await _qm.EnqueueAsync(tx, queue, ct);
 
         _log.LogInformation("🟡 Inscripción PENDIENTE encolada (TxId={TxId}, Registro={Registro})", tx.Id, dto.Registro);
@@ -222,6 +223,68 @@ public async Task<IActionResult> CrearAsync(
 // ===========================================
 // GET /api/inscripciones/estado-inscripcion/{registro}
 // ===========================================
+// [HttpGet("estado-inscripcion/{registro}")]
+// public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServices] ServicioAContext db)
+// {
+//     if (string.IsNullOrWhiteSpace(registro))
+//         return BadRequest(new { mensaje = "El registro del estudiante es requerido." });
+
+//     registro = registro.Trim().ToUpperInvariant();
+//     _log.LogInformation("🔍 Consultando estado de inscripción del estudiante {Registro}", registro);
+
+//     var estudiante = await db.Estudiantes
+//         .AsNoTracking()
+//         .FirstOrDefaultAsync(e => e.Registro == registro);
+
+//     if (estudiante == null)
+//         return NotFound(new { mensaje = $"No existe estudiante con registro {registro}." });
+
+//     // 🧠 Importante: usar ToListAsync() antes del Select que contiene el array
+//     var inscripciones = await db.Inscripciones
+//         .AsNoTracking()
+//         .Include(i => i.Detalles)
+//             .ThenInclude(d => d.GrupoMateria)
+//                 .ThenInclude(g => g.Materia)
+//         .Where(i => i.EstudianteId == estudiante.Id)
+//         .OrderByDescending(i => i.Fecha)
+//         .ToListAsync(); // ✅ materializamos primero en memoria
+
+//     var resultado = inscripciones.Select(i => new
+//     {
+//         i.Id,
+//         i.Estado,
+//         i.Fecha,
+//         i.PeriodoId,
+//         Materias = i.Detalles.Any()
+//             ? i.Detalles.Select(d => new
+//             {
+//                 d.GrupoMateria.Materia.Codigo,
+//                 d.GrupoMateria.Materia.Nombre,
+//                 d.GrupoMateria.Grupo,
+//                 d.Estado
+//             })
+//             : new[]
+//             {
+//                 new
+//                 {
+//                     Codigo = "(pendiente)",
+//                     Nombre = "(sin procesar)",
+//                     Grupo = "-",
+//                     Estado = "PENDIENTE"
+//                 }
+//             }
+//     }).ToList();
+
+//     if (!resultado.Any())
+//         return Ok(new { mensaje = "El estudiante no tiene inscripciones registradas." });
+
+//     _log.LogInformation("📋 {Cantidad} inscripciones encontradas para {Registro}", resultado.Count, registro);
+//     return Ok(resultado);
+// }
+
+// ===========================================
+// GET /api/inscripciones/estado-inscripcion/{registro}
+// ===========================================
 [HttpGet("estado-inscripcion/{registro}")]
 public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServices] ServicioAContext db)
 {
@@ -238,7 +301,6 @@ public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServ
     if (estudiante == null)
         return NotFound(new { mensaje = $"No existe estudiante con registro {registro}." });
 
-    // 🧠 Importante: usar ToListAsync() antes del Select que contiene el array
     var inscripciones = await db.Inscripciones
         .AsNoTracking()
         .Include(i => i.Detalles)
@@ -246,23 +308,94 @@ public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServ
                 .ThenInclude(g => g.Materia)
         .Where(i => i.EstudianteId == estudiante.Id)
         .OrderByDescending(i => i.Fecha)
-        .ToListAsync(); // ✅ materializamos primero en memoria
+        .ToListAsync();
 
-    var resultado = inscripciones.Select(i => new
+    var resultado = new List<object>();
+
+    foreach (var i in inscripciones)
     {
-        i.Id,
-        i.Estado,
-        i.Fecha,
-        i.PeriodoId,
-        Materias = i.Detalles.Any()
-            ? i.Detalles.Select(d => new
+        // ✅ Si ya tiene detalles confirmados
+        if (i.Detalles.Any())
+        {
+            resultado.Add(new
             {
-                d.GrupoMateria.Materia.Codigo,
-                d.GrupoMateria.Materia.Nombre,
-                d.GrupoMateria.Grupo,
-                d.Estado
-            })
-            : new[]
+                i.Id,
+                i.Estado,
+                i.Fecha,
+                i.PeriodoId,
+                Materias = i.Detalles.Select(d => new
+                {
+                    d.GrupoMateria.Materia.Codigo,
+                    d.GrupoMateria.Materia.Nombre,
+                    d.GrupoMateria.Grupo,
+                    d.Estado
+                })
+            });
+            continue;
+        }
+
+        // ✅ Si no tiene detalles, buscar la transacción asociada (InscripcionId exacto)
+        var tx = await db.Transacciones
+            .AsNoTracking()
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync(t =>
+                t.Entidad == "Inscripcion" &&
+                t.Payload.Contains($"\"InscripcionId\":{i.Id}"));
+
+        if (tx != null && !string.IsNullOrWhiteSpace(tx.Payload))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(tx.Payload);
+                if (doc.RootElement.TryGetProperty("Materias", out var materiasJson))
+                {
+                    var materias = new List<object>();
+                    foreach (var m in materiasJson.EnumerateArray())
+                    {
+                        var codigo = m.GetProperty("MateriaCodigo").GetString() ?? "(desconocido)";
+                        var grupo = m.GetProperty("Grupo").GetString() ?? "-";
+
+                        // 🔍 Buscar el nombre real de la materia
+                        var nombre = await db.Materias
+                            .AsNoTracking()
+                            .Where(mat => mat.Codigo.ToUpper() == codigo)
+                            .Select(mat => mat.Nombre)
+                            .FirstOrDefaultAsync() ?? "(pendiente de confirmación)";
+
+                        materias.Add(new
+                        {
+                            Codigo = codigo,
+                            Nombre = nombre,
+                            Grupo = grupo,
+                            Estado = "PENDIENTE"
+                        });
+                    }
+
+                    resultado.Add(new
+                    {
+                        i.Id,
+                        i.Estado,
+                        i.Fecha,
+                        i.PeriodoId,
+                        Materias = materias
+                    });
+                    continue;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning("⚠️ Error leyendo payload de Transacción para {Registro}: {Msg}", registro, ex.Message);
+            }
+        }
+
+        // 🚨 Si no hay transacción o no se pudo leer el payload
+        resultado.Add(new
+        {
+            i.Id,
+            i.Estado,
+            i.Fecha,
+            i.PeriodoId,
+            Materias = new[]
             {
                 new
                 {
@@ -272,7 +405,8 @@ public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServ
                     Estado = "PENDIENTE"
                 }
             }
-    }).ToList();
+        });
+    }
 
     if (!resultado.Any())
         return Ok(new { mensaje = "El estudiante no tiene inscripciones registradas." });
@@ -280,7 +414,6 @@ public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServ
     _log.LogInformation("📋 {Cantidad} inscripciones encontradas para {Registro}", resultado.Count, registro);
     return Ok(resultado);
 }
-
 
 
 

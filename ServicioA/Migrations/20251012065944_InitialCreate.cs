@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ServicioA.Migrations
 {
     /// <inheritdoc />
-    public partial class InitFullReset : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -113,6 +113,29 @@ namespace ServicioA.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ProcessedMessages", x => x.MessageId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Transacciones",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TipoOperacion = table.Column<string>(type: "text", nullable: false),
+                    Entidad = table.Column<string>(type: "text", nullable: false),
+                    Payload = table.Column<string>(type: "text", nullable: true),
+                    Estado = table.Column<string>(type: "text", nullable: false),
+                    Attempt = table.Column<int>(type: "integer", nullable: false),
+                    Priority = table.Column<int>(type: "integer", nullable: false),
+                    MaxRetries = table.Column<int>(type: "integer", nullable: false),
+                    CallbackUrl = table.Column<string>(type: "text", nullable: true),
+                    CallbackSecret = table.Column<string>(type: "text", nullable: true),
+                    IdempotencyKey = table.Column<string>(type: "text", nullable: true),
+                    NotBefore = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Transacciones", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -789,6 +812,9 @@ namespace ServicioA.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProcessedMessages");
+
+            migrationBuilder.DropTable(
+                name: "Transacciones");
 
             migrationBuilder.DropTable(
                 name: "DetallesInscripciones");
