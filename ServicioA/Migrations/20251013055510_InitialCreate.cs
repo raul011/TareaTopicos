@@ -500,8 +500,18 @@ namespace ServicioA.Migrations
                 columns: new[] { "Id", "Dia", "HoraFin", "HoraInicio" },
                 values: new object[,]
                 {
-                    { 1, "Lunes", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
-                    { 2, "Martes", new TimeOnly(12, 0, 0), new TimeOnly(10, 0, 0) }
+                    { 1, "Mar-Jue", new TimeOnly(20, 30, 0), new TimeOnly(18, 15, 0) },
+                    { 2, "Mar-Jue", new TimeOnly(9, 15, 0), new TimeOnly(7, 0, 0) },
+                    { 3, "Mar-Jue", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
+                    { 4, "Mar-Jue", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
+                    { 5, "Mar-Jue", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
+                    { 6, "Mar-Jue", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
+                    { 7, "Mar-Jue", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
+                    { 8, "Mar-Jue", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
+                    { 9, "Mar-Jue", new TimeOnly(10, 0, 0), new TimeOnly(8, 0, 0) },
+                    { 10, "Lun-Mie-Vie", new TimeOnly(10, 0, 0), new TimeOnly(8, 30, 0) },
+                    { 11, "Lun-Mie-Vie", new TimeOnly(11, 30, 0), new TimeOnly(10, 0, 0) },
+                    { 12, "Lun-Mie-Vie", new TimeOnly(8, 30, 0), new TimeOnly(7, 0, 0) }
                 });
 
             migrationBuilder.InsertData(
@@ -580,9 +590,14 @@ namespace ServicioA.Migrations
                 columns: new[] { "Id", "AulaId", "Cupo", "DocenteId", "Estado", "Grupo", "HorarioId", "MateriaId", "PeriodoId" },
                 values: new object[,]
                 {
-                    { 1, 1, 5, 1, "ACTIVO", "SA", 1, 1, 1 },
-                    { 2, 1, 5, 1, "ACTIVO", "SB", 1, 1, 1 },
-                    { 3, 2, 5, 2, "ACTIVO", "B", 2, 2, 1 }
+                    { 1, 1, 5, 97, "ACTIVO", "SB", 11, 3, 1 },
+                    { 2, 1, 5, 57, "ACTIVO", "SD", 1, 3, 1 },
+                    { 3, 1, 5, 35, "ACTIVO", "SF", 10, 3, 1 },
+                    { 4, 1, 5, 92, "ACTIVO", "Z1", 12, 3, 1 },
+                    { 5, 1, 5, 55, "ACTIVO", "SF", 12, 2, 1 },
+                    { 6, 2, 5, 56, "ACTIVO", "SH", 2, 2, 1 },
+                    { 7, 2, 5, 43, "ACTIVO", "SK", 2, 2, 1 },
+                    { 8, 2, 5, 14, "ACTIVO", "Z2", 10, 2, 1 }
                 });
 
             migrationBuilder.InsertData(

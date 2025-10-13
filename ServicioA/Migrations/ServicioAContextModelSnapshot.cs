@@ -1206,11 +1206,11 @@ namespace ServicioA.Migrations
                             Id = 1,
                             AulaId = 1,
                             Cupo = 5,
-                            DocenteId = 1,
+                            DocenteId = 97,
                             Estado = "ACTIVO",
-                            Grupo = "SA",
-                            HorarioId = 1,
-                            MateriaId = 1,
+                            Grupo = "SB",
+                            HorarioId = 11,
+                            MateriaId = 3,
                             PeriodoId = 1
                         },
                         new
@@ -1218,22 +1218,82 @@ namespace ServicioA.Migrations
                             Id = 2,
                             AulaId = 1,
                             Cupo = 5,
-                            DocenteId = 1,
+                            DocenteId = 57,
                             Estado = "ACTIVO",
-                            Grupo = "SB",
+                            Grupo = "SD",
                             HorarioId = 1,
-                            MateriaId = 1,
+                            MateriaId = 3,
                             PeriodoId = 1
                         },
                         new
                         {
                             Id = 3,
+                            AulaId = 1,
+                            Cupo = 5,
+                            DocenteId = 35,
+                            Estado = "ACTIVO",
+                            Grupo = "SF",
+                            HorarioId = 10,
+                            MateriaId = 3,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            AulaId = 1,
+                            Cupo = 5,
+                            DocenteId = 92,
+                            Estado = "ACTIVO",
+                            Grupo = "Z1",
+                            HorarioId = 12,
+                            MateriaId = 3,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            AulaId = 1,
+                            Cupo = 5,
+                            DocenteId = 55,
+                            Estado = "ACTIVO",
+                            Grupo = "SF",
+                            HorarioId = 12,
+                            MateriaId = 2,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 6,
                             AulaId = 2,
                             Cupo = 5,
-                            DocenteId = 2,
+                            DocenteId = 56,
                             Estado = "ACTIVO",
-                            Grupo = "B",
+                            Grupo = "SH",
                             HorarioId = 2,
+                            MateriaId = 2,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 7,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 43,
+                            Estado = "ACTIVO",
+                            Grupo = "SK",
+                            HorarioId = 2,
+                            MateriaId = 2,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 8,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 14,
+                            Estado = "ACTIVO",
+                            Grupo = "Z2",
+                            HorarioId = 10,
                             MateriaId = 2,
                             PeriodoId = 1
                         });
@@ -1316,16 +1376,86 @@ namespace ServicioA.Migrations
                         new
                         {
                             Id = 1,
-                            Dia = "Lunes",
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(20, 30, 0),
+                            HoraInicio = new TimeOnly(18, 15, 0)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(9, 15, 0),
+                            HoraInicio = new TimeOnly(7, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Dia = "Mar-Jue",
                             HoraFin = new TimeOnly(10, 0, 0),
                             HoraInicio = new TimeOnly(8, 0, 0)
                         },
                         new
                         {
-                            Id = 2,
-                            Dia = "Martes",
-                            HoraFin = new TimeOnly(12, 0, 0),
+                            Id = 4,
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(10, 0, 0),
+                            HoraInicio = new TimeOnly(8, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(10, 0, 0),
+                            HoraInicio = new TimeOnly(8, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(10, 0, 0),
+                            HoraInicio = new TimeOnly(8, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(10, 0, 0),
+                            HoraInicio = new TimeOnly(8, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(10, 0, 0),
+                            HoraInicio = new TimeOnly(8, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Dia = "Mar-Jue",
+                            HoraFin = new TimeOnly(10, 0, 0),
+                            HoraInicio = new TimeOnly(8, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Dia = "Lun-Mie-Vie",
+                            HoraFin = new TimeOnly(10, 0, 0),
+                            HoraInicio = new TimeOnly(8, 30, 0)
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Dia = "Lun-Mie-Vie",
+                            HoraFin = new TimeOnly(11, 30, 0),
                             HoraInicio = new TimeOnly(10, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Dia = "Lun-Mie-Vie",
+                            HoraFin = new TimeOnly(8, 30, 0),
+                            HoraInicio = new TimeOnly(7, 0, 0)
                         });
                 });
 
