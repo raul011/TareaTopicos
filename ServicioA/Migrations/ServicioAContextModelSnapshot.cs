@@ -2158,6 +2158,56 @@ namespace ServicioA.Migrations
                     b.ToTable("ProcessedMessages");
                 });
 
+            modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.Transaccion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CallbackSecret")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CallbackUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Entidad")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasColumnType("text");
+
+                    b.Property<int>("MaxRetries")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("NotBefore")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TipoOperacion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Transacciones");
+                });
+
             modelBuilder.Entity("TAREATOPICOS.ServicioA.Models.DetalleInscripcion", b =>
                 {
                     b.HasOne("TAREATOPICOS.ServicioA.Models.GrupoMateria", "GrupoMateria")

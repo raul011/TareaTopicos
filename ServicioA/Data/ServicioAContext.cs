@@ -26,6 +26,8 @@ namespace TAREATOPICOS.ServicioA.Data
         public DbSet<DetalleInscripcion> DetallesInscripciones { get; set; }
         public DbSet<HistorialAcademico> HistorialesAcademicos { get; set; }
 
+        public DbSet<Transaccion> Transacciones { get; set; } = null!;
+
         public DbSet<ProcessedMessage> ProcessedMessages { get; set; } // para idempotencia
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

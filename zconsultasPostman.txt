@@ -42,21 +42,40 @@ Esto te listará todas las transacciones que tenés guardadas, algo como:
 Paso 3: Ver la transacción específica
 HGETALL tx:1972b5fe-03e9-4ade-81a9-025ae16dfd79
 
+Reset total
+docker compose down
+docker compose down -v
+docker compose up -d --build
+docker compose logs -f servicioa
 
 //BASE DE DefaultProcessor
-docker exec -it universidad_db psql -U postgres -d universidad
-SELECT * FROM "Niveles";            
+docker exec -it postgres_db psql -U postgres
+\c universidad
+\dt
+\! clear
+
 SELECT * FROM "Aulas";
-SELECT * FROM "Materias";
-SELECT * FROM "Inscripciones";
-SELECT * FROM "GruposMaterias";
+SELECT * FROM "Carreras";
 SELECT * FROM "DetallesInscripciones";
+SELECT * FROM "Docentes";
 SELECT * FROM "Estudiantes";
-SELECT * FROM "Materias";
 SELECT * FROM "GruposMaterias";
+SELECT * FROM "HistorialesAcademicos";
+SELECT * FROM "Horarios";
+SELECT * FROM "Inscripciones";
+SELECT * FROM "Materias";
+SELECT * FROM "Niveles";
+SELECT * FROM "PeriodosAcademicos";
+SELECT * FROM "PlanMaterias";
+SELECT * FROM "PlanesEstudio";
+http://localhost:5001/simulador.html
 
 \x off : para tabla bonito
-
+SELECT "Id", "Entidad", "Estado", "Payload"
+FROM "Transacciones"
+WHERE "Entidad" = 'Inscripcion'
+ORDER BY "CreatedAt" DESC
+LIMIT 3;
 SELECT *
 FROM "Materias"
 WHERE "Codigo" = 'MAT-150';
@@ -100,17 +119,13 @@ Username	postgres
 Password	1234
 
 
-Reset total
-docker compose down
-docker compose down -v
-docker compose up -d --build
-docker compose logs -f servicioa
+
 
 
 http://localhost:5001/queue-dashboard.html
 BASE DE DATOS DE DOCKER
 http://localhost:5050/browser/
- http://localhost:5001/swagger/index.html
+http://localhost:5001/swagger/index.html
 
  //para reiniciar si se cambia models
 rm -rf ServicioA/Migrations
@@ -156,3 +171,19 @@ POST http://localhost:5001/admin/queues?name=inscripciones&workers=5&processor=N
 
 
 
+
+
+GET http://localhost:5001/api/inscripciones/materias-disponibles/20251234
+GET http://localhost:5001/api/inscripciones/grupos/INF119
+POST http://localhost:5001/api/inscripciones/async
+{
+  "registro": "20251234",
+  "periodoId": 1,
+  "materias": [
+    {
+      "materiaCodigo": "MAT101",
+      "grupo": "A"
+    } 
+  ]
+}
+GET http://localhost:5001/api/inscripciones/estado-inscripcion/20251234
