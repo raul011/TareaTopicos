@@ -55,7 +55,7 @@
               <div class="card-body">
                 <ul class="list-group">
                   <li v-for="(item, index) in seleccion" :key="item.materiaCodigo" class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>{{ item.materiaNombre }} (Grupo {{ item.grupo }})</span>
+                    <span>{{ item.materiaNombre }} (G: {{ item.grupo.grupo }}) - {{ item.grupo.horario }}</span>
                     <button class="btn btn-sm btn-outline-danger" @click="quitarDeSeleccion(index)">
                       <i class="bi bi-trash"></i>
                     </button>
@@ -138,6 +138,9 @@
                         Seleccionar
                       </button>
                     </td>
+                  </tr>
+                  <tr v-if="gruposPorMateria.length === 0">
+                    <td colspan="5" class="text-center text-muted">No hay grupos disponibles para esta materia.</td>
                   </tr>
                 </tbody>
               </table>
@@ -233,15 +236,66 @@ const verGrupos = async (materia) => {
   }
 };
 
+const parseHorario = (horarioStr) => {
+  if (!horarioStr || !horarioStr.includes(' ')) return null;
+  const parts = horarioStr.split(' ');
+  if (parts.length < 4) return null;
+
+  const dia = parts[0];
+  const horaInicio = parseInt(parts[1].replace(':', ''), 10);
+  const horaFin = parseInt(parts[3].replace(':', ''), 10);
+
+  return { dia, horaInicio, horaFin };
+};
+
+const hayChoqueHorario = (nuevoGrupo) => {
+  // MODIFICADO: Se mejora la robustez de la función
+  const horarioNuevo = parseHorario(nuevoGrupo.horario);
+  if (!horarioNuevo) return false; // No se puede validar si el formato es incorrecto
+
+  for (const item of seleccion.value) {
+    const horarioExistente = parseHorario(item.grupo.horario);
+    if (!horarioExistente) continue;
+
+    // Si no es el mismo día, no hay choque
+    if (horarioNuevo.dia !== horarioExistente.dia) {
+      continue;
+    }
+
+    // Lógica de solapamiento de rangos de tiempo
+    // Hay choque si (InicioA < FinB) y (InicioB < FinA)
+    if (horarioNuevo.horaInicio < horarioExistente.horaFin && horarioExistente.horaInicio < horarioNuevo.horaFin) {
+      return `Hay un choque de horario con ${item.materiaNombre} (G: ${item.grupo.grupo}).`;
+    }
+  }
+  return null; // No hay choque
+};
+
 const seleccionarGrupo = (grupo) => {
+  // MODIFICADO: Lógica de validación en tiempo real
+  // 1. Validar si la materia ya está en la selección
   if (seleccion.value.some(item => item.materiaCodigo === materiaSeleccionada.value.codigo)) {
     alert('Ya has seleccionado esta materia. Quítala de tu selección si quieres cambiar de grupo.');
     return;
   }
+
+  // 2. NUEVO: Validar cupo antes de añadir
+  if (grupo.cupo <= 0) {
+    alert(`El grupo ${grupo.grupo} de ${materiaSeleccionada.value.nombre} ya no tiene cupos disponibles.`);
+    return;
+  }
+
+  // 3. NUEVO: Validar choque de horario antes de añadir
+  const choque = hayChoqueHorario(grupo);
+  if (choque) {
+    alert(choque);
+    return;
+  }
+  // Si todas las validaciones pasan, se añade a la selección
   seleccion.value.push({
     materiaCodigo: materiaSeleccionada.value.codigo,
     materiaNombre: materiaSeleccionada.value.nombre,
-    grupo: grupo.grupo
+    grupo: grupo // Guardamos el objeto completo
   });
   gruposModal.hide();
 };
@@ -256,7 +310,7 @@ const confirmarInscripcion = async () => {
   const payload = {
     registro: registro,
     periodoId: 1, // Asumimos un ID de período fijo por ahora
-    materias: seleccion.value.map(s => ({ materiaCodigo: s.materiaCodigo, grupo: s.grupo }))
+    materias: seleccion.value.map(s => ({ materiaCodigo: s.materiaCodigo, grupo: s.grupo.grupo }))
   };
 
   try {
