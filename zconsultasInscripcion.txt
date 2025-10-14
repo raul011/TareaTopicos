@@ -1,0 +1,57 @@
+
+Reset total
+docker compose down
+docker compose down -v
+docker compose up -d --build
+docker compose logs -f servicioa
+
+//BASE DE DefaultProcessor
+docker exec -it postgres_db psql -U postgres
+\c universidad
+\dt
+\! clear
+
+SELECT * FROM "Aulas";
+SELECT * FROM "Carreras";
+SELECT * FROM "DetallesInscripciones";
+SELECT * FROM "Docentes";
+SELECT * FROM "Estudiantes";
+SELECT * FROM "GruposMaterias";
+SELECT * FROM "HistorialesAcademicos";
+SELECT * FROM "Horarios";
+SELECT * FROM "Inscripciones";
+SELECT * FROM "Materias";
+SELECT * FROM "Niveles";
+SELECT * FROM "PeriodosAcademicos";
+SELECT * FROM "PlanMaterias";
+SELECT * FROM "PlanesEstudio";
+http://localhost:5001/simulador.html
+http://localhost:5001/queue-dashboard.html
+BASE DE DATOS DE DOCKER
+http://localhost:5050/browser/
+http://localhost:5001/swagger/index.html
+
+
+
+
+POST http://localhost:5001/api/estudiantes/login
+{
+  "Registro": "20251234",
+  "password": "7894561"
+}
+GET http://localhost:5001/api/estudiantes/me    //Bearer TOKEN
+
+GET http://localhost:5001/api/inscripciones/materias-disponibles/20251234
+GET http://localhost:5001/api/inscripciones/grupos/INF119
+POST http://localhost:5001/api/inscripciones/async
+{
+  "registro": "20251234",
+  "periodoId": 1,
+  "materias": [
+    {
+      "materiaCodigo": "MAT101",
+      "grupo": "A"
+    } 
+  ]
+}
+GET http://localhost:5001/api/inscripciones/estado-inscripcion/20251234

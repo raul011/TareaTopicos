@@ -138,6 +138,8 @@ public sealed class InscripcionProcessor : IProcessor
             };
 
             inscripcion.Fecha = DateTime.UtcNow; // Actualizamos la fecha también
+            
+
             await _db.SaveChangesAsync(ct);
             await dbTx.CommitAsync(ct);
 
@@ -149,7 +151,9 @@ public sealed class InscripcionProcessor : IProcessor
                 "RECHAZADA" => "REJECTED",
                 _ => "COMPLETADO"
             };
-
+// 💾 Guardar estado final
+_db.Transacciones.Update(tx);
+await _db.SaveChangesAsync(ct);
             _log.LogInformation("✅ Tx {TxId} → Inscripción {Id} {Estado} ({Confirmadas}/{Total})",
                 tx.Id, inscripcion.Id, inscripcion.Estado, confirmadas, total);
         }

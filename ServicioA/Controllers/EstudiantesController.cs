@@ -241,6 +241,34 @@ public class EstudiantesController : ControllerBase
 
         return Ok(new { token = jwt });
     }
+[Authorize]
+[HttpGet("me")]
+public IActionResult GetPerfil()
+{
+    var registro = User.Claims.FirstOrDefault(c => c.Type == "Registro")?.Value;
+
+    if (string.IsNullOrEmpty(registro))
+        return Unauthorized(new { mensaje = "Token inválido o expirado" });
+
+    var estudiante = _context.Estudiantes
+        .Include(e => e.Carrera)
+        .FirstOrDefault(e => e.Registro == registro);
+
+    if (estudiante == null)
+        return NotFound(new { mensaje = "Estudiante no encontrado" });
+
+    return Ok(new
+    {
+        estudiante.Id,
+        estudiante.Registro,
+        estudiante.Nombre,
+        estudiante.Email,
+        estudiante.Telefono,
+        estudiante.Direccion,
+        estudiante.Estado,
+        Carrera = estudiante.Carrera?.Nombre
+    });
+}
 
     // === Mappers ===
     private static EstudianteRequestDto ToDTO(Estudiante e) => new()

@@ -2,7 +2,8 @@ ServicioA/
 ├─ Controllers/
 │  ├─ AdminController.cs
 │  ├─ HealthController.cs
-│  ├─ NivelesController.cs
+│  ├─ EstudiantesController.cs
+│  ├─ InscripcionesController.cs
 │  ├─ ReadinessController.cs
 │  └─ TransaccionesController.cs
 │  └─ InscripcionesController.cs
@@ -37,7 +38,6 @@ ServicioA/
 │  │  ├─ IProcessor.cs
 │  │  ├─ IQueueProcessor.cs
 │  │  ├─ InscripcionProcessor.cs
-│  │  └─ NivelProcessor.cs  //archivo de prueba para model los demas igual 
 │  ├─ seeders/
 │  │  └─ ISeeder.cs
 │  ├─ CallbackService.cs

@@ -52,6 +52,7 @@ private readonly ServicioAContext _context;
         var cursadas = await db.Inscripciones
             .Where(i => i.EstudianteId == estudiante.Id)
             .SelectMany(i => i.Detalles)
+            
             .Select(d => d.GrupoMateria.MateriaId)
             .Distinct()
             .ToListAsync();
@@ -223,68 +224,6 @@ await _context.SaveChangesAsync(ct);
 // ===========================================
 // GET /api/inscripciones/estado-inscripcion/{registro}
 // ===========================================
-// [HttpGet("estado-inscripcion/{registro}")]
-// public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServices] ServicioAContext db)
-// {
-//     if (string.IsNullOrWhiteSpace(registro))
-//         return BadRequest(new { mensaje = "El registro del estudiante es requerido." });
-
-//     registro = registro.Trim().ToUpperInvariant();
-//     _log.LogInformation("🔍 Consultando estado de inscripción del estudiante {Registro}", registro);
-
-//     var estudiante = await db.Estudiantes
-//         .AsNoTracking()
-//         .FirstOrDefaultAsync(e => e.Registro == registro);
-
-//     if (estudiante == null)
-//         return NotFound(new { mensaje = $"No existe estudiante con registro {registro}." });
-
-//     // 🧠 Importante: usar ToListAsync() antes del Select que contiene el array
-//     var inscripciones = await db.Inscripciones
-//         .AsNoTracking()
-//         .Include(i => i.Detalles)
-//             .ThenInclude(d => d.GrupoMateria)
-//                 .ThenInclude(g => g.Materia)
-//         .Where(i => i.EstudianteId == estudiante.Id)
-//         .OrderByDescending(i => i.Fecha)
-//         .ToListAsync(); // ✅ materializamos primero en memoria
-
-//     var resultado = inscripciones.Select(i => new
-//     {
-//         i.Id,
-//         i.Estado,
-//         i.Fecha,
-//         i.PeriodoId,
-//         Materias = i.Detalles.Any()
-//             ? i.Detalles.Select(d => new
-//             {
-//                 d.GrupoMateria.Materia.Codigo,
-//                 d.GrupoMateria.Materia.Nombre,
-//                 d.GrupoMateria.Grupo,
-//                 d.Estado
-//             })
-//             : new[]
-//             {
-//                 new
-//                 {
-//                     Codigo = "(pendiente)",
-//                     Nombre = "(sin procesar)",
-//                     Grupo = "-",
-//                     Estado = "PENDIENTE"
-//                 }
-//             }
-//     }).ToList();
-
-//     if (!resultado.Any())
-//         return Ok(new { mensaje = "El estudiante no tiene inscripciones registradas." });
-
-//     _log.LogInformation("📋 {Cantidad} inscripciones encontradas para {Registro}", resultado.Count, registro);
-//     return Ok(resultado);
-// }
-
-// ===========================================
-// GET /api/inscripciones/estado-inscripcion/{registro}
-// ===========================================
 [HttpGet("estado-inscripcion/{registro}")]
 public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServices] ServicioAContext db)
 {
@@ -414,13 +353,47 @@ public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServ
     _log.LogInformation("📋 {Cantidad} inscripciones encontradas para {Registro}", resultado.Count, registro);
     return Ok(resultado);
 }
+// ===========================================
+// GET /api/inscripciones/estado-transaccion/{txId}
+// ===========================================
+[HttpGet("estado-transaccion/{txId:guid}")]
+public async Task<IActionResult> GetEstadoDesdeTransaccion(Guid txId, [FromServices] ServicioAContext db)
+{
+    var tx = await db.Transacciones.AsNoTracking().FirstOrDefaultAsync(t => t.Id == txId);
+    if (tx is null)
+        return NotFound(new { mensaje = "Transacción no encontrada" });
 
+    int? inscripcionId = null;
+    string? estado = null;
 
+    try
+    {
+        var payload = JsonSerializer.Deserialize<JsonElement>(tx.Payload ?? "{}");
+        if (payload.TryGetProperty("InscripcionId", out var insElem))
+        {
+            inscripcionId = insElem.GetInt32();
+            var inscripcion = await db.Inscripciones
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.Id == inscripcionId);
 
+            estado = inscripcion?.Estado;
+        }
+    }
+    catch (Exception ex)
+    {
+        _log.LogWarning("⚠️ Error leyendo payload de transacción {TxId}: {Msg}", txId, ex.Message);
+    }
 
-
-
-
+    return Ok(new
+    {
+        tx.Id,
+        tx.Estado,
+        InscripcionId = inscripcionId,
+        EstadoInscripcion = estado ?? "(pendiente)",
+        Entidad = tx.Entidad,
+        Creado = tx.CreatedAt
+    });
+}
 
 }
  
