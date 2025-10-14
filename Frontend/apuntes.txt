@@ -112,3 +112,16 @@ VALUES (8, 'SD', 21, 15, 5, 1, 'ACTIVO', 1);
 -- 🔥 ESTE GRUPO NO TIENE CUPOS DISPONIBLES
 INSERT INTO "GruposMaterias" ("MateriaId", "Grupo", "DocenteId", "Cupo", "HorarioId", "AulaId", "Estado", "PeriodoId")
 VALUES (6, 'Z1', 30, 0, 6, 2, 'ACTIVO', 1);
+
+network_security_config.xml
+y en ApiClient: app\app\src\main\java\com\example\inscripcionapp
+// ⚠️ IMPORTANTE: CAMBIA ESTA IP
+// Usa la IP de tu computadora en la red local.
+// Para encontrarla, en Windows abre cmd y escribe: ipconfig
+// Busca la dirección IPv4 de tu adaptador Wi-Fi o Ethernet.
+// --------------------------------------------------------------------------------
+private const val BASE_URL = "http://192.168.1.10:5001/" // <-- CAMBIA ESTO
+
+ensamblar la app
+.\gradlew.bat assembleDebug
+app\build\outputs\apk\debug\app-debug.apk
