@@ -1147,6 +1147,17 @@ namespace ServicioA.Migrations
                             Nombre = "Ana Rodríguez",
                             PasswordHash = "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq",
                             Registro = "EST002"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CarreraId = 1,
+                            Ci = "8246335",
+                            Email = "raul@uagrm.edu",
+                            Estado = "ACTIVO",
+                            Nombre = "Ana Rodríguez",
+                            PasswordHash = "AQAAAAIAAYagAAAAEIZLDG+jC0kz9eYFWxOrsu9bQHoefqBTG5lUM7sL+T3Ns9qA5zJskH4e4g/YmnRrUQ==",
+                            Registro = "2123456"
                         });
                 });
 
@@ -1295,6 +1306,102 @@ namespace ServicioA.Migrations
                             Grupo = "Z2",
                             HorarioId = 10,
                             MateriaId = 2,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 9,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 9,
+                            Estado = "ACTIVO",
+                            Grupo = "F1",
+                            HorarioId = 10,
+                            MateriaId = 1,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 10,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 16,
+                            Estado = "ACTIVO",
+                            Grupo = "SG",
+                            HorarioId = 10,
+                            MateriaId = 1,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 11,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 80,
+                            Estado = "ACTIVO",
+                            Grupo = "Z1",
+                            HorarioId = 10,
+                            MateriaId = 1,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 12,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 26,
+                            Estado = "ACTIVO",
+                            Grupo = "Z1",
+                            HorarioId = 10,
+                            MateriaId = 5,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 13,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 98,
+                            Estado = "ACTIVO",
+                            Grupo = "Z3",
+                            HorarioId = 10,
+                            MateriaId = 5,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 14,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 63,
+                            Estado = "ACTIVO",
+                            Grupo = "Z1",
+                            HorarioId = 10,
+                            MateriaId = 4,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 15,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 25,
+                            Estado = "ACTIVO",
+                            Grupo = "Z3",
+                            HorarioId = 10,
+                            MateriaId = 4,
+                            PeriodoId = 1
+                        },
+                        new
+                        {
+                            Id = 16,
+                            AulaId = 2,
+                            Cupo = 5,
+                            DocenteId = 23,
+                            Estado = "ACTIVO",
+                            Grupo = "SI",
+                            HorarioId = 10,
+                            MateriaId = 4,
                             PeriodoId = 1
                         });
                 });
@@ -1939,7 +2046,21 @@ namespace ServicioA.Migrations
                             Id = 3,
                             MateriaId = 3,
                             PlanId = 1,
-                            Semestre = 2
+                            Semestre = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            MateriaId = 4,
+                            PlanId = 1,
+                            Semestre = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            MateriaId = 5,
+                            PlanId = 1,
+                            Semestre = 1
                         });
                 });
 

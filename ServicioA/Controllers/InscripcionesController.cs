@@ -418,6 +418,125 @@ public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServ
 
 
 
+[HttpGet("estado-inscripcion/{registro}/{inscripcionId:int}")]
+public async Task<IActionResult> GetEstadoInscripcion(
+    string registro, 
+    int inscripcionId, 
+    [FromServices] ServicioAContext db)
+{
+    if (string.IsNullOrWhiteSpace(registro))
+        return BadRequest(new { mensaje = "El registro del estudiante es requerido." });
+
+    registro = registro.Trim().ToUpperInvariant();
+    _log.LogInformation("🔍 Consultando inscripción {InscripcionId} del estudiante {Registro}", inscripcionId, registro);
+
+    var estudiante = await db.Estudiantes
+        .AsNoTracking()
+        .FirstOrDefaultAsync(e => e.Registro == registro);
+
+    if (estudiante == null)
+        return NotFound(new { mensaje = $"No existe estudiante con registro {registro}." });
+
+    var inscripcion = await db.Inscripciones
+        .AsNoTracking()
+        .Include(i => i.Detalles)
+            .ThenInclude(d => d.GrupoMateria)
+                .ThenInclude(g => g.Materia)
+        .FirstOrDefaultAsync(i => i.EstudianteId == estudiante.Id && i.Id == inscripcionId);
+
+    if (inscripcion == null)
+        return NotFound(new { mensaje = $"No existe inscripción {inscripcionId} para el estudiante {registro}." });
+
+    // ✅ Si tiene detalles confirmados
+    if (inscripcion.Detalles.Any())
+    {
+        return Ok(new
+        {
+            inscripcion.Id,
+            inscripcion.Estado,
+            inscripcion.Fecha,
+            inscripcion.PeriodoId,
+            Materias = inscripcion.Detalles.Select(d => new
+            {
+                d.GrupoMateria.Materia.Codigo,
+                d.GrupoMateria.Materia.Nombre,
+                d.GrupoMateria.Grupo,
+                d.Estado
+            })
+        });
+    }
+
+    // ✅ Si no tiene detalles, buscar la transacción asociada
+    var tx = await db.Transacciones
+        .AsNoTracking()
+        .OrderByDescending(t => t.CreatedAt)
+        .FirstOrDefaultAsync(t =>
+            t.Entidad == "Inscripcion" &&
+            t.Payload.Contains($"\"InscripcionId\":{inscripcion.Id}"));
+
+    if (tx != null && !string.IsNullOrWhiteSpace(tx.Payload))
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(tx.Payload);
+            if (doc.RootElement.TryGetProperty("Materias", out var materiasJson))
+            {
+                var materias = new List<object>();
+                foreach (var m in materiasJson.EnumerateArray())
+                {
+                    var codigo = m.GetProperty("MateriaCodigo").GetString() ?? "(desconocido)";
+                    var grupo = m.GetProperty("Grupo").GetString() ?? "-";
+
+                    var nombre = await db.Materias
+                        .AsNoTracking()
+                        .Where(mat => mat.Codigo.ToUpper() == codigo)
+                        .Select(mat => mat.Nombre)
+                        .FirstOrDefaultAsync() ?? "(pendiente de confirmación)";
+
+                    materias.Add(new
+                    {
+                        Codigo = codigo,
+                        Nombre = nombre,
+                        Grupo = grupo,
+                        Estado = "PENDIENTE"
+                    });
+                }
+
+                return Ok(new
+                {
+                    inscripcion.Id,
+                    inscripcion.Estado,
+                    inscripcion.Fecha,
+                    inscripcion.PeriodoId,
+                    Materias = materias
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("⚠️ Error leyendo payload de Transacción para {Registro}: {Msg}", registro, ex.Message);
+        }
+    }
+
+    // 🚨 Si no hay transacción o no se pudo leer el payload
+    return Ok(new
+    {
+        inscripcion.Id,
+        inscripcion.Estado,
+        inscripcion.Fecha,
+        inscripcion.PeriodoId,
+        Materias = new[]
+        {
+            new
+            {
+                Codigo = "(pendiente)",
+                Nombre = "(sin procesar)",
+                Grupo = "-",
+                Estado = "PENDIENTE"
+            }
+        }
+    });
+}
 
 
 
