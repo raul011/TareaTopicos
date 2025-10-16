@@ -25,7 +25,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy => policy
-            .WithOrigins("http://localhost:5173") // puerto de tu Vite
+            .WithOrigins(
+                "http://localhost:5173",               // Vite (web)
+                "http://localhost:8081",               // Expo Web
+                "http://192.168.0.11:8081",            // Expo LAN
+                "https://nk4q3tc-anonymous-8081.exp.direct" // Expo Tunnel (automático)
+            ) // puerto de tu Vite
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
