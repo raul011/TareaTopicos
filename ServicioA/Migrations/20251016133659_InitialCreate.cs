@@ -565,7 +565,7 @@ namespace ServicioA.Migrations
                 values: new object[,]
                 {
                     { 1, 1, "7894561", null, "carlos@uni.edu", "ACTIVO", "Carlos Sánchez", "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq", "20251234", null },
-                    { 2, 2, "222222", null, "ana@uni.edu", "ACTIVO", "Ana Rodríguez", "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq", "EST002", null }
+                    { 2, 1, "222222", null, "ana@uni.edu", "ACTIVO", "Ana Rodríguez", "$2a$11$YP4gNElOt/d79qZIHbwT3eAxgSg8R.DkDofhZOnq2dH1/IytjKdSq", "EST002", null }
                 });
 
             migrationBuilder.InsertData(

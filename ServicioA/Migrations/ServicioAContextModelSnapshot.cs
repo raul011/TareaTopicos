@@ -1140,7 +1140,7 @@ namespace ServicioA.Migrations
                         new
                         {
                             Id = 2,
-                            CarreraId = 2,
+                            CarreraId = 1,
                             Ci = "222222",
                             Email = "ana@uni.edu",
                             Estado = "ACTIVO",

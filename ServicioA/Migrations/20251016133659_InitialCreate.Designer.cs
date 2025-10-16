@@ -12,7 +12,7 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20251016053226_InitialCreate")]
+    [Migration("20251016133659_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1143,7 +1143,7 @@ namespace ServicioA.Migrations
                         new
                         {
                             Id = 2,
-                            CarreraId = 2,
+                            CarreraId = 1,
                             Ci = "222222",
                             Email = "ana@uni.edu",
                             Estado = "ACTIVO",
