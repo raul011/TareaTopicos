@@ -60,8 +60,7 @@ docker exec -it postgres_db psql -U postgres
 \c universidad
 \dt
 \! clear
-8 MAT101 1 z1
-11 INF119 2 z2
+
 SELECT * FROM "Aulas";
 SELECT * FROM "Carreras";
 SELECT * FROM "DetallesInscripciones";
@@ -82,8 +81,56 @@ BASE DE DATOS DE DOCKER
 http://localhost:5050/browser/
 http://localhost:5001/swagger/index.html
 
+  1 | MAT101 | CALCULO I   
+  2 | INF119 | ESTRUCTURAS DISCRETAS  
+  4 | FIS100 | FISICA I                        
+  5 | LIN100 | INGLES I 
 
+ Id | Grupo | Cupo | Estado | MateriaId | DocenteId | PeriodoId | HorarioId | AulaId
+----+-------+------+--------+-----------+-----------+-----------+-----------+--------
 
+  5 | SF    |    1 | ACTIVO |         2 |        55 |         1 |        12 |      1
+  6 | SH    |    1 | ACTIVO |         2 |        56 |         1 |         2 |      2
+  7 | SK    |    5 | ACTIVO |         2 |        43 |         1 |         2 |      2
+  8 | Z2    |    5 | ACTIVO |         2 |        14 |         1 |        10 |      2
+  9 | F1    |    1 | ACTIVO |         1 |         9 |         1 |        10 |      2
+ 10 | SG    |    1 | ACTIVO |         1 |        16 |         1 |        10 |      2
+ 11 | Z1    |    5 | ACTIVO |         1 |        80 |         1 |        10 |      2
+ 12 | Z1    |    1 | ACTIVO |         5 |        26 |         1 |        10 |      2
+ 13 | Z3    |    5 | ACTIVO |         5 |        98 |         1 |        10 |      2
+ 14 | Z1    |    1 | ACTIVO |         4 |        63 |         1 |        10 |      2
+ 15 | Z3    |    5 | ACTIVO |         4 |        25 |         1 |        10 |      2
+ 16 | SI    |    5 | ACTIVO |         4 |        23 |         1 |        10 |      2
+CHOQUE HORARIO
+{
+  "registro": "20251234",
+  "periodoId": 1,
+  "materias": [
+    {
+      "materiaCodigo": "MAT101",
+      "grupo": "Z1"
+    },
+    {
+      "materiaCodigo": "INF119",
+      "grupo": "Z2"
+    }
+  ]
+}
+SIN CHOQUE HORARIO
+{
+  "registro": "20251234",
+  "periodoId": 1,
+  "materias": [
+    {
+      "materiaCodigo": "MAT101",
+      "grupo": "Z1"
+    },
+    {
+      "materiaCodigo": "INF119",
+      "grupo": "SF"
+    }
+  ]
+}
 
 POST http://localhost:5001/api/estudiantes/login
 {
