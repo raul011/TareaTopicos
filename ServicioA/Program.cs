@@ -32,6 +32,7 @@ builder.Services.AddCors(options =>
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    // .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
 builder.Services.AddDbContext<ServicioAContext>(options =>
@@ -107,49 +108,23 @@ builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.PlanDeEstu
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.PlanDeEstudioProcessor>();  
 
-/*
-builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();
-builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
-                           TAREATOPICOS.ServicioA.Services.Processors.GrupoMateriaProcessor>();                             
-*/
-// Router (IQueueProcessor) → DefaultProcessor
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IQueueProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.DefaultProcessor>();
 
-// ... resto de tus servicios
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.IIdempotencyGuard,
                            TAREATOPICOS.ServicioA.Services.IdempotencyGuard>();
-
-// builder.Services.AddHttpClient<CallbackService>();         // para webhooks
-
-// builder.Services.AddHttpClient<CallbackService>(c =>
-// {
-//     c.Timeout = TimeSpan.FromSeconds(5);
-// });
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
+ 
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.DetalleInscripcionProcessor>();
 builder.Services.AddScoped<TAREATOPICOS.ServicioA.Services.Processors.IProcessor,
                            TAREATOPICOS.ServicioA.Services.Processors.DetalleInscripcionProcessor>();
-
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
-// Processor para DetalleInscripcion (POST/PUT/DELETE)
-
-
-
+ 
 builder.Services.AddScoped<QueueManager>();
 
 builder.Services.AddScoped<ITransaccionStore, RedisTransaccionStore>(); // tu store real
-
-// Tu registro de colas/servicios propios
+ 
 builder.Services.AddServicioAQueues(builder.Configuration);
 builder.Services.AddSingleton<QueueStateService>();
-
-// Health checks
+ 
 builder.Services.AddHealthChecks();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "dev-key";

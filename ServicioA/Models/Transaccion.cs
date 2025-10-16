@@ -22,7 +22,7 @@ public class Transaccion
     public int MaxRetries { get; set; } = 3;
 
    
-
+public string? MensajeError { get; set; }
    public string? CallbackUrl { get; set; }          // <— nuevo
     public string? CallbackSecret { get; set; }       // <— nuevo (para HMAC)
     public string? IdempotencyKey { get; set; }       // <— nuevo

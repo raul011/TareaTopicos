@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ServicioA.Migrations
 {
     /// <inheritdoc />
-    public partial class InitNueva : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -127,6 +127,7 @@ namespace ServicioA.Migrations
                     Attempt = table.Column<int>(type: "integer", nullable: false),
                     Priority = table.Column<int>(type: "integer", nullable: false),
                     MaxRetries = table.Column<int>(type: "integer", nullable: false),
+                    MensajeError = table.Column<string>(type: "text", nullable: true),
                     CallbackUrl = table.Column<string>(type: "text", nullable: true),
                     CallbackSecret = table.Column<string>(type: "text", nullable: true),
                     IdempotencyKey = table.Column<string>(type: "text", nullable: true),
@@ -613,20 +614,20 @@ namespace ServicioA.Migrations
                 columns: new[] { "Id", "AulaId", "Cupo", "DocenteId", "Estado", "Grupo", "HorarioId", "MateriaId", "PeriodoId" },
                 values: new object[,]
                 {
-                    { 1, 1, 5, 97, "ACTIVO", "SB", 11, 3, 1 },
-                    { 2, 1, 5, 57, "ACTIVO", "SD", 1, 3, 1 },
+                    { 1, 1, 1, 97, "ACTIVO", "SB", 11, 3, 1 },
+                    { 2, 1, 1, 57, "ACTIVO", "SD", 1, 3, 1 },
                     { 3, 1, 5, 35, "ACTIVO", "SF", 10, 3, 1 },
                     { 4, 1, 5, 92, "ACTIVO", "Z1", 12, 3, 1 },
-                    { 5, 1, 5, 55, "ACTIVO", "SF", 12, 2, 1 },
-                    { 6, 2, 5, 56, "ACTIVO", "SH", 2, 2, 1 },
+                    { 5, 1, 1, 55, "ACTIVO", "SF", 12, 2, 1 },
+                    { 6, 2, 1, 56, "ACTIVO", "SH", 2, 2, 1 },
                     { 7, 2, 5, 43, "ACTIVO", "SK", 2, 2, 1 },
                     { 8, 2, 5, 14, "ACTIVO", "Z2", 10, 2, 1 },
-                    { 9, 2, 5, 9, "ACTIVO", "F1", 10, 1, 1 },
-                    { 10, 2, 5, 16, "ACTIVO", "SG", 10, 1, 1 },
+                    { 9, 2, 1, 9, "ACTIVO", "F1", 10, 1, 1 },
+                    { 10, 2, 1, 16, "ACTIVO", "SG", 10, 1, 1 },
                     { 11, 2, 5, 80, "ACTIVO", "Z1", 10, 1, 1 },
-                    { 12, 2, 5, 26, "ACTIVO", "Z1", 10, 5, 1 },
+                    { 12, 2, 1, 26, "ACTIVO", "Z1", 10, 5, 1 },
                     { 13, 2, 5, 98, "ACTIVO", "Z3", 10, 5, 1 },
-                    { 14, 2, 5, 63, "ACTIVO", "Z1", 10, 4, 1 },
+                    { 14, 2, 1, 63, "ACTIVO", "Z1", 10, 4, 1 },
                     { 15, 2, 5, 25, "ACTIVO", "Z3", 10, 4, 1 },
                     { 16, 2, 5, 23, "ACTIVO", "SI", 10, 4, 1 }
                 });
@@ -647,7 +648,9 @@ namespace ServicioA.Migrations
                 {
                     { 1, 1, 1, 1 },
                     { 2, 2, 1, 1 },
-                    { 3, 3, 1, 2 }
+                    { 3, 3, 1, 1 },
+                    { 4, 4, 1, 1 },
+                    { 5, 5, 1, 1 }
                 });
 
             migrationBuilder.InsertData(

@@ -10,7 +10,9 @@ namespace TAREATOPICOS.ServicioA.Data.Seeders
             modelBuilder.Entity<PlanMateria>().HasData(
                 new { Id = 1, PlanId = 1, MateriaId = 1, Semestre = 1 },
                 new { Id = 2, PlanId = 1, MateriaId = 2, Semestre = 1 },
-                new { Id = 3, PlanId = 1, MateriaId = 3, Semestre = 2 }
+                new { Id = 3, PlanId = 1, MateriaId = 3, Semestre = 1 },
+                new { Id = 4, PlanId = 1, MateriaId = 4, Semestre = 1 },
+                new { Id = 5, PlanId = 1, MateriaId = 5, Semestre = 1 } 
             );
         }
     }

@@ -12,8 +12,8 @@ using TAREATOPICOS.ServicioA.Data;
 namespace ServicioA.Migrations
 {
     [DbContext(typeof(ServicioAContext))]
-    [Migration("20251013175123_InitNueva")]
-    partial class InitNueva
+    [Migration("20251016053226_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1208,7 +1208,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 1,
                             AulaId = 1,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 97,
                             Estado = "ACTIVO",
                             Grupo = "SB",
@@ -1220,7 +1220,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 2,
                             AulaId = 1,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 57,
                             Estado = "ACTIVO",
                             Grupo = "SD",
@@ -1256,7 +1256,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 5,
                             AulaId = 1,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 55,
                             Estado = "ACTIVO",
                             Grupo = "SF",
@@ -1268,7 +1268,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 6,
                             AulaId = 2,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 56,
                             Estado = "ACTIVO",
                             Grupo = "SH",
@@ -1304,7 +1304,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 9,
                             AulaId = 2,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 9,
                             Estado = "ACTIVO",
                             Grupo = "F1",
@@ -1316,7 +1316,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 10,
                             AulaId = 2,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 16,
                             Estado = "ACTIVO",
                             Grupo = "SG",
@@ -1340,7 +1340,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 12,
                             AulaId = 2,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 26,
                             Estado = "ACTIVO",
                             Grupo = "Z1",
@@ -1364,7 +1364,7 @@ namespace ServicioA.Migrations
                         {
                             Id = 14,
                             AulaId = 2,
-                            Cupo = 5,
+                            Cupo = 1,
                             DocenteId = 63,
                             Estado = "ACTIVO",
                             Grupo = "Z1",
@@ -2038,7 +2038,21 @@ namespace ServicioA.Migrations
                             Id = 3,
                             MateriaId = 3,
                             PlanId = 1,
-                            Semestre = 2
+                            Semestre = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            MateriaId = 4,
+                            PlanId = 1,
+                            Semestre = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            MateriaId = 5,
+                            PlanId = 1,
+                            Semestre = 1
                         });
                 });
 
@@ -2288,6 +2302,9 @@ namespace ServicioA.Migrations
 
                     b.Property<int>("MaxRetries")
                         .HasColumnType("integer");
+
+                    b.Property<string>("MensajeError")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("NotBefore")
                         .HasColumnType("timestamp with time zone");

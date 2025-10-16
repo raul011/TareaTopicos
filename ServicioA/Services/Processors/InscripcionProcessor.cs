@@ -101,32 +101,79 @@ public sealed class InscripcionProcessor : IProcessor
                     continue;
                 }
 
+                // ✅ Verificar si el estudiante ya está inscrito en ese grupo
+                bool yaExiste = await _db.DetallesInscripciones
+                    .Include(d => d.Inscripcion)
+                    .AnyAsync(d =>
+                        d.Inscripcion!.EstudianteId == estudiante.Id &&
+                        d.GrupoMateriaId == grupo.Id, ct);
+
+                if (yaExiste)
+                {
+                    _log.LogWarning("⏩ Estudiante {Registro} ya inscrito en {MateriaCodigo}-{Grupo}, se omite",
+                        payload.Registro, m.MateriaCodigo, m.Grupo);
+                    continue;
+                }
+
                 if (grupo.Cupo <= 0)
                 {
                     _log.LogWarning("❌ Sin cupos para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
                     continue;
                 }
+// 🕓 Verificar choques de horario
+// 🕓 Verificar choques de horario (según tu modelo actual)
+bool hayChoque = false;
 
-                // Crear detalle si aún no existe
-                bool yaInscrito = inscripcion.Detalles.Any(d => d.GrupoMateriaId == grupo.Id);
-                if (!yaInscrito)
+if (grupo.HorarioId.HasValue)
+{
+    var horarioNuevo = await _db.Horarios
+        .AsNoTracking()
+        .FirstOrDefaultAsync(h => h.Id == grupo.HorarioId.Value, ct);
+
+    if (horarioNuevo != null)
+    {
+        // Traer todos los horarios actuales del estudiante en este mismo periodo
+        var horariosExistentes = await _db.DetallesInscripciones
+            .Include(d => d.GrupoMateria)
+                .ThenInclude(gm => gm.Horario)
+            .Where(d => d.Inscripcion!.EstudianteId == estudiante.Id &&
+                        d.GrupoMateria!.PeriodoId == payload.PeriodoId &&
+                        d.GrupoMateria.Horario != null)
+            .Select(d => d.GrupoMateria!.Horario!)
+            .ToListAsync(ct);
+
+        hayChoque = horariosExistentes.Any(h =>
+            h.Dia == horarioNuevo.Dia &&
+            h.HoraInicio < horarioNuevo.HoraFin &&
+            horarioNuevo.HoraInicio < h.HoraFin
+        );
+    }
+}
+
+if (hayChoque)
+{
+    _log.LogWarning("⛔ Choque de horario para {MateriaCodigo}-{Grupo}", m.MateriaCodigo, m.Grupo);
+    tx.MensajeError = $"Choque de horario con {m.MateriaCodigo}-{m.Grupo}";
+    continue;
+}
+
+
+                // Crear nuevo detalle de inscripción
+                var detalle = new DetalleInscripcion
                 {
-                    var detalle = new DetalleInscripcion
-                    {
-                        Codigo = $"{m.MateriaCodigo}-{m.Grupo}-{inscripcion.Id}",
-                        Estado = "INSCRITO",
-                        InscripcionId = inscripcion.Id,
-                        GrupoMateriaId = grupo.Id
-                    };
-                    _db.DetallesInscripciones.Add(detalle);
-                    confirmadas++;
+                    Codigo = $"{m.MateriaCodigo}-{m.Grupo}-{inscripcion.Id}",
+                    Estado = "INSCRITO",
+                    InscripcionId = inscripcion.Id,
+                    GrupoMateriaId = grupo.Id
+                };
+                _db.DetallesInscripciones.Add(detalle);
+                confirmadas++;
 
-                    grupo.Cupo -= 1;
-                    _db.GruposMaterias.Update(grupo);
+                grupo.Cupo -= 1;
+                _db.GruposMaterias.Update(grupo);
 
-                    _log.LogInformation("📉 Cupo actualizado {MateriaCodigo}-{Grupo}: nuevo cupo={NuevoCupo}",
-                        m.MateriaCodigo, m.Grupo, grupo.Cupo);
-                }
+                _log.LogInformation("📉 Cupo actualizado {MateriaCodigo}-{Grupo}: nuevo cupo={NuevoCupo}",
+                    m.MateriaCodigo, m.Grupo, grupo.Cupo);
             }
 
             // 🟢 Actualizar estado final
@@ -138,7 +185,6 @@ public sealed class InscripcionProcessor : IProcessor
             };
 
             inscripcion.Fecha = DateTime.UtcNow; // Actualizamos la fecha también
-            
 
             await _db.SaveChangesAsync(ct);
             await dbTx.CommitAsync(ct);
@@ -151,9 +197,11 @@ public sealed class InscripcionProcessor : IProcessor
                 "RECHAZADA" => "REJECTED",
                 _ => "COMPLETADO"
             };
-// 💾 Guardar estado final
-_db.Transacciones.Update(tx);
-await _db.SaveChangesAsync(ct);
+
+            // 💾 Guardar estado final
+            _db.Transacciones.Update(tx);
+            await _db.SaveChangesAsync(ct);
+
             _log.LogInformation("✅ Tx {TxId} → Inscripción {Id} {Estado} ({Confirmadas}/{Total})",
                 tx.Id, inscripcion.Id, inscripcion.Estado, confirmadas, total);
         }

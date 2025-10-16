@@ -1,9 +1,59 @@
+1.docker compose down -v --rmi all
+2.
+dotnet ef database drop
+rm -r Migrations
+3.
+docker compose down
+docker compose down -v
+docker compose up -d --build
+4.docker ps
+5.
+docker exec -it postgres_db psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'universidad';"
+
+docker exec -it postgres_db psql -U postgres -d universidad -c "DROP TABLE IF EXISTS \"__EFMigrationsHistory\";"
+6.
+docker exec -it postgres_db psql -U postgres -c "DROP DATABASE IF EXISTS universidad;"
+docker exec -it postgres_db psql -U postgres -c "CREATE DATABASE universidad;"
+7.cd servicioa
+8.dotnet ef migrations add InitialCreate
+9. POWERSHELL
+docker run --rm `
+  --network tareatopicos_default `
+  -v "${PWD}:/app" `
+  -w /app `
+  -e "ConnectionStrings__DefaultConnection=Host=postgres_db;Port=5432;Database=universidad;Username=postgres;Password=1234" `
+  mcr.microsoft.com/dotnet/sdk:8.0 bash -c 'dotnet tool install -g dotnet-ef --version 9.0.9 && export PATH=$PATH:/root/.dotnet/tools && dotnet ef database update'
+10.
+docker exec -it postgres_db psql -U postgres -d universidad -c "\dt"
+
+
 
 Reset total
 docker compose down
 docker compose down -v
 docker compose up -d --build
 docker compose logs -f servicioa
+
+
+docker ps
+docker network ls
+
+
+dotnet ef database drop
+rm -r Migrations
+
+
+ 
+dotnet ef database update
+dotnet ef database update --connection "Host=localhost;Port=5432;Database=universidad;Username=postgres;Password=1234"
+
+
+en power shell
+docker run --rm -v "${PWD}:/app" -w /app --network tareatopicos_default mcr.microsoft.com/dotnet/sdk:8.0 `
+dotnet ef database update --connection "Host=postgres_db;Port=5432;Database=universidad;Username=postgres;Password=1234"
+docker exec -it postgres_db psql -U postgres -d universidad -c "\dt"
+
+
 
 //BASE DE DefaultProcessor
 docker exec -it postgres_db psql -U postgres
@@ -55,3 +105,33 @@ POST http://localhost:5001/api/inscripciones/async
   ]
 }
 GET http://localhost:5001/api/inscripciones/estado-inscripcion/20251234
+
+
+
+
+
+
+
+# Detener todo
+docker stop $(docker ps -aq)
+
+# Eliminar todos los contenedores
+docker rm -f $(docker ps -aq)
+
+# Eliminar todas las imágenes
+docker rmi -f $(docker images -aq)
+
+# Eliminar todos los volúmenes
+docker volume rm -f $(docker volume ls -q)
+
+# Eliminar todas las redes creadas por docker-compose
+docker network prune -f
+
+
+
+docker ps -a
+docker images
+docker volume ls
+
+
+docker compose up --build
