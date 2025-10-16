@@ -125,6 +125,103 @@ public async Task<IActionResult> ObtenerGruposPorMateria(
     });
 }
 
+// // ===========================================
+// // POST /api/inscripciones/async
+// // ===========================================
+// [HttpPost("async")]
+// public async Task<IActionResult> CrearAsync(
+//     [FromBody] InscripcionCreateDto dto,
+//     [FromQuery] string? queue = "default",
+//     [FromQuery] int priority = 1,
+//     [FromQuery] DateTimeOffset? notBeforeUtc = null,
+//     CancellationToken ct = default)
+// {
+//     if (dto == null || string.IsNullOrWhiteSpace(dto.Registro) || dto.PeriodoId <= 0 ||
+//         dto.Materias == null || !dto.Materias.Any())
+//         return BadRequest(new { mensaje = "Registro, PeriodoId y al menos una materia son requeridos." });
+
+//     try
+//     {
+//         // 🔹 Buscar estudiante
+//         var estudianteId = await _context.Estudiantes
+//             .Where(e => e.Registro == dto.Registro)
+//             .Select(e => e.Id)
+//             .FirstOrDefaultAsync(ct);
+
+//         if (estudianteId == 0)
+//             return NotFound(new { mensaje = $"Estudiante {dto.Registro} no encontrado." });
+
+//         // 🔹 Crear inscripción visible inmediatamente (PENDIENTE)
+//         var inscripcion = new Inscripcion
+//         {
+//             EstudianteId = estudianteId,
+//             PeriodoId = dto.PeriodoId,
+//             Fecha = DateTime.UtcNow,
+//             Estado = "PENDIENTE"
+//         };
+
+//         _context.Inscripciones.Add(inscripcion);
+//         await _context.SaveChangesAsync(ct);
+
+//         // 🔹 Armar payload con el Id recién creado
+//         var payloadObj = new
+//         {
+//             Registro = dto.Registro.Trim().ToUpperInvariant(),
+//             PeriodoId = dto.PeriodoId,
+//             Materias = dto.Materias.Select(m => new
+//             {
+//                 MateriaCodigo = m.MateriaCodigo.Trim().ToUpperInvariant(),
+//                 Grupo = m.Grupo.Trim().ToUpperInvariant()
+//             }),
+//             InscripcionId = inscripcion.Id   // 🔥 CLAVE: el Processor lo usará para actualizar
+//         };
+
+//         // 🔹 Crear transacción asíncrona
+//         var tx = new Transaccion
+//         {
+//             TipoOperacion = "POST",
+//             Entidad = "Inscripcion",
+//             Payload = JsonSerializer.Serialize(payloadObj),
+//             Estado = "EN_COLA",
+//             Priority = Math.Clamp(priority, 0, 2),
+//             NotBefore = notBeforeUtc ?? DateTimeOffset.UtcNow,
+//             CallbackUrl = _cfg["Webhook:DefaultUrl"],
+//             CallbackSecret = _cfg["Webhook:DefaultSecret"],
+//             CreatedAt = DateTimeOffset.UtcNow,
+//             IdempotencyKey = $"{dto.Registro}-{dto.PeriodoId}-{Guid.NewGuid():N}"
+//         };
+// _context.Transacciones.Add(tx);
+// await _context.SaveChangesAsync(ct);
+//         await _qm.EnqueueAsync(tx, queue, ct);
+
+//         _log.LogInformation("🟡 Inscripción PENDIENTE encolada (TxId={TxId}, Registro={Registro})", tx.Id, dto.Registro);
+
+//         return Ok(new
+//         {
+//             mensaje = "Solicitud encolada (pendiente de procesamiento).",
+//             estado = "PENDIENTE",
+//             transactionId = tx.Id,
+//             inscripcion = new
+//             {
+//                 id = inscripcion.Id,
+//                 registro = dto.Registro,
+//                 periodoId = dto.PeriodoId,
+//                 materias = dto.Materias.Select(m => new { codigo = m.MateriaCodigo, grupo = m.Grupo }),
+//                 fecha = inscripcion.Fecha
+//             }
+//         });
+//     }
+//     catch (Exception ex)
+//     {
+//         _log.LogError(ex, "💥 Error al crear inscripción asincrónica para {Registro}", dto.Registro);
+//         return StatusCode(500, new
+//         {
+//             mensaje = "Error interno del servidor.",
+//             detalle = ex.Message
+//         });
+//     }
+// } 
+
 // ===========================================
 // POST /api/inscripciones/async
 // ===========================================
@@ -163,6 +260,34 @@ public async Task<IActionResult> CrearAsync(
         _context.Inscripciones.Add(inscripcion);
         await _context.SaveChangesAsync(ct);
 
+        // 🔹 Loguear los horarios reales de los grupos solicitados
+        foreach (var m in dto.Materias)
+        {
+            var codigo = m.MateriaCodigo.Trim().ToUpperInvariant();
+            var grupo = m.Grupo.Trim().ToUpperInvariant();
+
+            var grupoMateria = await _context.GruposMaterias
+                .Include(g => g.Horario)
+                .Include(g => g.Materia)
+                .FirstOrDefaultAsync(g =>
+                    g.Materia.Codigo == codigo &&
+                    g.Grupo == grupo &&
+                    g.PeriodoId == dto.PeriodoId, ct);
+
+            if (grupoMateria == null)
+            {
+                _log.LogWarning("⚠️ Grupo no encontrado: {Codigo}-{Grupo}", codigo, grupo);
+                continue;
+            }
+
+            var horario = grupoMateria.Horario != null
+                ? $"{grupoMateria.Horario.Dia} {grupoMateria.Horario.HoraInicio:hh\\:mm}-{grupoMateria.Horario.HoraFin:hh\\:mm}"
+                : "SIN HORARIO";
+
+            _log.LogInformation("📚 Solicitud incluye {Materia} ({Codigo}-{Grupo}) → {Horario}",
+                grupoMateria.Materia.Nombre, codigo, grupo, horario);
+        }
+
         // 🔹 Armar payload con el Id recién creado
         var payloadObj = new
         {
@@ -190,11 +315,14 @@ public async Task<IActionResult> CrearAsync(
             CreatedAt = DateTimeOffset.UtcNow,
             IdempotencyKey = $"{dto.Registro}-{dto.PeriodoId}-{Guid.NewGuid():N}"
         };
-_context.Transacciones.Add(tx);
-await _context.SaveChangesAsync(ct);
+
+        _context.Transacciones.Add(tx);
+        await _context.SaveChangesAsync(ct);
+
         await _qm.EnqueueAsync(tx, queue, ct);
 
-        _log.LogInformation("🟡 Inscripción PENDIENTE encolada (TxId={TxId}, Registro={Registro})", tx.Id, dto.Registro);
+        _log.LogInformation("🟡 Inscripción PENDIENTE encolada (TxId={TxId}, Registro={Registro}, Periodo={Periodo})",
+            tx.Id, dto.Registro, dto.PeriodoId);
 
         return Ok(new
         {
@@ -220,7 +348,8 @@ await _context.SaveChangesAsync(ct);
             detalle = ex.Message
         });
     }
-} 
+}
+
 // ===========================================
 // GET /api/inscripciones/estado-inscripcion/{registro}
 // ===========================================
@@ -353,30 +482,78 @@ public async Task<IActionResult> GetEstadoInscripcion(string registro, [FromServ
     _log.LogInformation("📋 {Cantidad} inscripciones encontradas para {Registro}", resultado.Count, registro);
     return Ok(resultado);
 }
+// // ===========================================
+// // GET /api/inscripciones/estado-transaccion/{txId}
+// // ===========================================
+// [HttpGet("estado-transaccion/{txId:guid}")]
+// public async Task<IActionResult> GetEstadoDesdeTransaccion(Guid txId, [FromServices] ServicioAContext db)
+// {
+//     var tx = await db.Transacciones.AsNoTracking().FirstOrDefaultAsync(t => t.Id == txId);
+//     if (tx is null)
+//         return NotFound(new { mensaje = "Transacción no encontrada" });
+
+//     int? inscripcionId = null;
+//     string? estado = null;
+
+//     try
+//     {
+//         var payload = JsonSerializer.Deserialize<JsonElement>(tx.Payload ?? "{}");
+//         if (payload.TryGetProperty("InscripcionId", out var insElem))
+//         {
+//             inscripcionId = insElem.GetInt32();
+//             var inscripcion = await db.Inscripciones
+//                 .AsNoTracking()
+//                 .FirstOrDefaultAsync(i => i.Id == inscripcionId);
+
+//             estado = inscripcion?.Estado;
+//         }
+//     }
+//     catch (Exception ex)
+//     {
+//         _log.LogWarning("⚠️ Error leyendo payload de transacción {TxId}: {Msg}", txId, ex.Message);
+//     }
+
+//     return Ok(new
+//     {
+//         tx.Id,
+//         tx.Estado,
+//         InscripcionId = inscripcionId,
+//         EstadoInscripcion = estado ?? "(pendiente)",
+//         Entidad = tx.Entidad,
+//         Creado = tx.CreatedAt
+//     });
+// }
 // ===========================================
 // GET /api/inscripciones/estado-transaccion/{txId}
 // ===========================================
 [HttpGet("estado-transaccion/{txId:guid}")]
 public async Task<IActionResult> GetEstadoDesdeTransaccion(Guid txId, [FromServices] ServicioAContext db)
 {
-    var tx = await db.Transacciones.AsNoTracking().FirstOrDefaultAsync(t => t.Id == txId);
+    // 🔍 Buscar la transacción por su ID
+    var tx = await db.Transacciones
+        .AsNoTracking()
+        .FirstOrDefaultAsync(t => t.Id == txId);
+
     if (tx is null)
-        return NotFound(new { mensaje = "Transacción no encontrada" });
+        return NotFound(new { mensaje = "Transacción no encontrada." });
 
     int? inscripcionId = null;
-    string? estado = null;
+    string? estadoInscripcion = null;
 
     try
     {
+        // 🔎 Intentar extraer el ID de inscripción del payload
         var payload = JsonSerializer.Deserialize<JsonElement>(tx.Payload ?? "{}");
+
         if (payload.TryGetProperty("InscripcionId", out var insElem))
         {
             inscripcionId = insElem.GetInt32();
+
             var inscripcion = await db.Inscripciones
                 .AsNoTracking()
                 .FirstOrDefaultAsync(i => i.Id == inscripcionId);
 
-            estado = inscripcion?.Estado;
+            estadoInscripcion = inscripcion?.Estado ?? "(pendiente)";
         }
     }
     catch (Exception ex)
@@ -384,13 +561,15 @@ public async Task<IActionResult> GetEstadoDesdeTransaccion(Guid txId, [FromServi
         _log.LogWarning("⚠️ Error leyendo payload de transacción {TxId}: {Msg}", txId, ex.Message);
     }
 
+    // ✅ Devolver información completa, incluyendo mensaje de error
     return Ok(new
     {
         tx.Id,
         tx.Estado,
         InscripcionId = inscripcionId,
-        EstadoInscripcion = estado ?? "(pendiente)",
+        EstadoInscripcion = estadoInscripcion,
         Entidad = tx.Entidad,
+        MensajeError = tx.MensajeError, // 👈 agregado
         Creado = tx.CreatedAt
     });
 }

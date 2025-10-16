@@ -60,7 +60,8 @@ docker exec -it postgres_db psql -U postgres
 \c universidad
 \dt
 \! clear
-
+8 MAT101 1 z1
+11 INF119 2 z2
 SELECT * FROM "Aulas";
 SELECT * FROM "Carreras";
 SELECT * FROM "DetallesInscripciones";
